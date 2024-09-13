@@ -1,5 +1,5 @@
 --[[
- * ReaScript Name: MoveSelectedRegionsToDuplicateTracks.lua
+ * ReaScript Name: MoveSelectedItemsToDuplicateTracks.lua
  * Author: Ben Kalman
 --]]
 
@@ -11,7 +11,7 @@ local function get_item_position(item)
     return reaper.GetMediaItemInfo_Value(item, "D_POSITION")
 end
 
-local function selected_media_items()
+local function selected_media_items_reversed()
     local count = reaper.CountSelectedMediaItems(0)
     local items = {}
     for i = 0, count - 1 do
@@ -23,7 +23,7 @@ end
 local function run()
     reaper.Undo_BeginBlock()
 
-    local selectedItems = selected_media_items()
+    local selectedItems = selected_media_items_reversed()
 
     if #selectedItems == 0 then
         return
@@ -41,7 +41,7 @@ local function run()
             reaper.Main_OnCommand(40062, 0)
             local newTrack = reaper.GetSelectedTrack(0, 0)
 
-            for _, newItem in ipairs(selected_media_items()) do
+            for _, newItem in ipairs(selected_media_items_reversed()) do
                 if get_item_track(newItem) == newTrack then
                     if get_item_position(newItem) == itemPosition then
                         reaper.SetMediaItemPosition(newItem, get_item_position(firstSelectedItem), false)
@@ -59,7 +59,7 @@ local function run()
         reaper.SetMediaItemInfo_Value(item, "B_MUTE_ACTUAL", 1)
     end
 
-    reaper.Undo_EndBlock("MoveSelectedRegionsToDuplicateTracks", -1)
+    reaper.Undo_EndBlock("MoveSelectedItemsToDuplicateTracks", -1)
 end
 
 run()
