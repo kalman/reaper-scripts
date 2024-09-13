@@ -55,7 +55,10 @@ local function run()
         reaper.SetOnlyTrackSelected(track)
     end
 
-    reaper.SetTrackUIMute(track, 1, 0)
+    for _, item in ipairs(selectedItems) do
+        reaper.SetMediaItemInfo_Value(item, "B_MUTE_ACTUAL", 1)
+    end
+
     reaper.Undo_EndBlock("MoveSelectedRegionsToDuplicateTracks", -1)
 end
 
