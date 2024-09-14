@@ -48,7 +48,7 @@ end
 
 local function last(array)
     local lastItem = nil
-    for _, item in ipairs(array) do 
+    for _, item in ipairs(array) do
         lastItem = item
     end
     return lastItem
@@ -56,9 +56,10 @@ end
 
 local function run()
     reaper.Undo_BeginBlock()
-    
+    reaper.Main_OnCommand(41119, 0) -- Disable auto-crossfades
+
     local sourceItems = selected_media_items()
-    
+
     if #sourceItems == 0 then
         return
     end
@@ -76,7 +77,8 @@ local function run()
     for _, item in ipairs(sourceItems) do
         reaper.Main_OnCommand(40289, 0) -- Unselected all items
         reaper.SetMediaItemSelected(item, 1)
-        reaper.Main_OnCommand(40698, 0) -- Copy items
+        reaper.Main_OnCommand(41295, 0) -- Duplicate items (new item will be selected)
+        local newItem = first(selected_media_items())
 
         reaper.InsertTrackInProject(0, nextTrackIndex, 0)
         local newTrack = reaper.GetTrack(0, nextTrackIndex)
@@ -84,9 +86,8 @@ local function run()
         newTracks[#newTracks + 1] = newTrack
         nextTrackIndex = nextTrackIndex + 1
 
-        reaper.SetOnlyTrackSelected(newTrack)
-        reaper.SetEditCurPos(firstItemPosition, 0, 0)
-        reaper.Main_OnCommand(42398, 0) -- Paste items/tracks
+        reaper.MoveMediaItemToTrack(newItem, newTrack)
+        reaper.SetMediaItemPosition(newItem, firstItemPosition, false)
     end
 
     for _, item in ipairs(sourceItems) do
@@ -102,6 +103,8 @@ local function run()
     reaper.ReorderSelectedTracks(get_track_index(last(newTracks)) + 1, 1)
     reaper.SetOnlyTrackSelected(sourceTrack)
     reaper.SetEditCurPos(startCursorPosition, 0, 0)
+
+    reaper.Main_OnCommand(41118, 0) -- Enable auto-crossfades
     reaper.Undo_EndBlock("MoveSelectedItemsToChildTracks", -1)
 end
 
