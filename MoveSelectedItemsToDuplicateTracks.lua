@@ -38,8 +38,8 @@ local function run()
         local itemPosition = get_item_position(item)
 
         if get_item_track(item) == track then
-            reaper.Main_OnCommand(40062, 0)
-            local newTrack = reaper.GetSelectedTrack(0, 0)
+            reaper.Main_OnCommand(40062, 0) -- Track: Duplicate tracks
+            local newTrack = reaper.GetSelectedTrack(0, 0) 
 
             for _, newItem in ipairs(selected_media_items_reversed()) do
                 if get_item_track(newItem) == newTrack then

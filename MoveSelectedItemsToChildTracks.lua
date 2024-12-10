@@ -56,7 +56,7 @@ end
 
 local function run()
     reaper.Undo_BeginBlock()
-    reaper.Main_OnCommand(41119, 0) -- Disable auto-crossfades
+    reaper.Main_OnCommand(41119, 0) -- Options: Disable auto-crossfades
 
     local sourceItems = selected_media_items()
 
@@ -71,13 +71,13 @@ local function run()
     local firstItemPosition = get_item_position(first(sourceItems))
     local newTracks = {}
 
-    reaper.SetOnlyTrackSelected(sourceTrack)
+    reaper.SetOnlyTrackSelected(sourceTrack) 
     local nextTrackIndex = sourceTrackIndex + 1
 
     for _, item in ipairs(sourceItems) do
-        reaper.Main_OnCommand(40289, 0) -- Unselected all items
+        reaper.Main_OnCommand(40289, 0) -- Item: Unselect (clear selection of) all items
         reaper.SetMediaItemSelected(item, 1)
-        reaper.Main_OnCommand(41295, 0) -- Duplicate items (new item will be selected)
+        reaper.Main_OnCommand(41295, 0) -- Item: Duplicate items (new item will be selected) 
         local newItem = first(selected_media_items())
 
         reaper.InsertTrackInProject(0, nextTrackIndex, 0)
@@ -104,7 +104,7 @@ local function run()
     reaper.SetOnlyTrackSelected(sourceTrack)
     reaper.SetEditCurPos(startCursorPosition, 0, 0)
 
-    reaper.Main_OnCommand(41118, 0) -- Enable auto-crossfades
+    reaper.Main_OnCommand(41118, 0) -- Options: Enable auto-crossfades
     reaper.Undo_EndBlock("MoveSelectedItemsToChildTracks", -1)
 end
 
