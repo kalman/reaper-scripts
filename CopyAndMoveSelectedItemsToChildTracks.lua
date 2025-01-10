@@ -1,5 +1,5 @@
 --[[
- * ReaScript Name: MoveSelectedItemsToChildTracks.lua
+ * ReaScript Name: CopyAndMoveSelectedItemsToChildTracks.lua
  * Author: Ben Kalman
 --]]
 
@@ -56,6 +56,7 @@ end
 
 local function run()
     reaper.Undo_BeginBlock()
+    reaper.Main_OnCommand(41119, 0) -- Options: Disable auto-crossfades
 
     local sourceItems = selected_media_items()
 
@@ -76,21 +77,36 @@ local function run()
     for _, item in ipairs(sourceItems) do
         reaper.Main_OnCommand(40289, 0) -- Item: Unselect (clear selection of) all items
         reaper.SetMediaItemSelected(item, 1)
+        reaper.Main_OnCommand(41295, 0) -- Item: Duplicate items (new item will be selected) 
+        local newItem = first(selected_media_items())
 
         reaper.InsertTrackInProject(0, nextTrackIndex, 0)
         local newTrack = reaper.GetTrack(0, nextTrackIndex)
         set_track_name(newTrack, sourceTrackName)
         newTracks[#newTracks + 1] = newTrack
         nextTrackIndex = nextTrackIndex + 1
-        reaper.MoveMediaItemToTrack(item, newTrack)
-        reaper.SetMediaItemPosition(item, firstItemPosition, false)
+
+        reaper.MoveMediaItemToTrack(newItem, newTrack)
+        reaper.SetMediaItemPosition(newItem, firstItemPosition, false)
+    end
+
+    for _, item in ipairs(sourceItems) do
+        reaper.SetMediaItemInfo_Value(item, "B_MUTE_ACTUAL", 1)
+    end
+
+    reaper.SetOnlyTrackSelected(first(newTracks))
+
+    for _, newTrack in ipairs(newTracks) do
+        reaper.SetTrackSelected(newTrack, 1)
     end
 
     reaper.ReorderSelectedTracks(get_track_index(last(newTracks)) + 1, 1)
     reaper.SetOnlyTrackSelected(sourceTrack)
     reaper.SetEditCurPos(startCursorPosition, 0, 0)
 
-    reaper.Undo_EndBlock("MoveSelectedItemsToChildTracks", -1)
+    reaper.Main_OnCommand(41118, 0) -- Options: Enable auto-crossfades
+    reaper.Undo_EndBlock("CopyAndMoveSelectedItemsToChildTracks", -1)
 end
 
 run()
+
