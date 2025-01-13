@@ -2,6 +2,7 @@ local _, path = reaper.get_action_context()
 local folder_path = path:match('^.+[\\/]')
 package.path = folder_path .. '?.lua;'
 local btk = require 'btk'
+local rpr = require 'rpr'
 
 local function run()
     reaper.Undo_BeginBlock()
@@ -9,7 +10,7 @@ local function run()
     local selectedItems = btk.get_selected_items()
 
     if #selectedItems == 0 then
-        reaper.Main_OnCommand(40421, 0) -- Item: Select all items in track
+        rpr.item_select_all_in_track()
         selectedItems = btk.get_selected_items()
     end
 
