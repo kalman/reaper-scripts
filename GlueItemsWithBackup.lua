@@ -15,7 +15,7 @@ local function main()
 
     rpr.item_duplicate()
     rpr.item_mute()
-    btk.select_items(selectedItems)
+    btk.select_only_items(selectedItems)
     rpr.item_glue()
 
     reaper.Undo_EndBlock("GlueItemsWithBackup", -1)

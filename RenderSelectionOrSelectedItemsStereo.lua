@@ -30,15 +30,15 @@ local function run(stereo)
         btk.extend_time_selection(1)
     end
 
-    if trackInfo.trackNumber == 1 then
+    if trackInfo.trackNumber1Based == 1 then
         if stereo then
             rpr.track_render_selected_area_to_stereo()
         else
             rpr.track_render_selected_area_to_mono()
         end
     else
-        -- GetTrack is 0-based, trackNumber is 1-based.
-        local previousTrack = reaper.GetTrack(0, trackInfo.trackNumber - 2)
+        -- GetTrack is 0-based, trackNumber1Based is 1-based.
+        local previousTrack = reaper.GetTrack(0, trackInfo.trackNumber1Based - 2)
         rpr.track_render_selected_area_to_stereo()
         rpr.item_select_all_in_track()
         btk.move_item_to_track(btk.get_selected_items()[1], previousTrack)
