@@ -162,6 +162,17 @@ local function get_items_in_track(track)
     return items
 end
 
+local function get_max_item_length(items)
+    local maxLength = 0
+
+    for _, item in ipairs(items) do
+        local itemInfo = get_item_info(item)
+        maxLength = math.max(maxLength, itemInfo.length)
+    end
+
+    return maxLength
+end
+
 return {
     named_on_command = named_on_command,
     get_all_items = get_all_items,
@@ -182,5 +193,6 @@ return {
     get_loop_time_range = get_loop_time_range,
     set_loop_time_range = set_loop_time_range,
     extend_time_selection = extend_time_selection,
-    get_descendant_tracks = get_descendant_tracks
+    get_descendant_tracks = get_descendant_tracks,
+    get_max_item_length = get_max_item_length,
 }
