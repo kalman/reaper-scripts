@@ -5,29 +5,29 @@ local btk = require 'btk'
 local rpr = require 'rpr'
 
 local function run(stereo)
-    local selectedTracks = btk.get_selected_tracks()
+    local selectedTracks = btk.GetSelectedTracks()
 
     if #selectedTracks == 0 then
         return
     elseif #selectedTracks > 1 then
         reaper.SetOnlyTrackSelected(selectedTracks[1])
-        selectedTracks = btk.get_selected_tracks()
+        selectedTracks = btk.GetSelectedTracks()
     end
 
     local track = selectedTracks[1]
-    local trackInfo = btk.get_track_info(track)
+    local trackInfo = btk.GetTrackInfo(track)
 
     local loopStart, loopEnd = reaper.GetSet_LoopTimeRange2(0, false, false, 0, 0, false)
     local loopItems = nil
 
     if loopStart == loopEnd then
-        loopItems = btk.get_selected_items()
+        loopItems = btk.GetSelectedItems()
         if #loopItems == 0 then
             return
         end
         rpr.sws_save_edit_cursor()
         rpr.time_selection_set_to_items()
-        btk.extend_time_selection(1)
+        btk.ExtendTimeSelection(1)
     end
 
     if trackInfo.trackNumber1Based == 1 then
@@ -41,8 +41,8 @@ local function run(stereo)
         local previousTrack = reaper.GetTrack(0, trackInfo.trackNumber1Based - 2)
         rpr.track_render_selected_area_to_stereo()
         rpr.item_select_all_in_track()
-        btk.move_item_to_track(btk.get_selected_items()[1], previousTrack)
-        reaper.DeleteTrack(btk.get_selected_tracks()[1])
+        btk.MoveItemToTrack(btk.GetSelectedItems()[1], previousTrack)
+        reaper.DeleteTrack(btk.GetSelectedTracks()[1])
     end
 
     if loopItems then

@@ -3,7 +3,7 @@ local function named_on_command(command_name)
     reaper.Main_OnCommand(command_id, 0)
 end
 
-local function get_all_items()
+local function GetAllItems()
     local count = reaper.CountMediaItems(0)
     local items = {}
     for i = 0, count - 1 do
@@ -12,10 +12,10 @@ local function get_all_items()
     return items
 end
 
-local function get_selected_items()
+local function GetSelectedItems()
     local selectedItems = {}
 
-    for _, item in ipairs(get_all_items()) do
+    for _, item in ipairs(GetAllItems()) do
         if reaper.IsMediaItemSelected(item) then
             selectedItems[#selectedItems + 1] = item
         end
@@ -24,8 +24,8 @@ local function get_selected_items()
     return selectedItems
 end
 
-local function select_only_items(items)
-    for _, item in ipairs(get_all_items()) do
+local function SelectOnlyItems(items)
+    for _, item in ipairs(GetAllItems()) do
         reaper.SetMediaItemSelected(item, false)
     end
     for _, item in ipairs(items) do
@@ -33,7 +33,7 @@ local function select_only_items(items)
     end
 end
 
-local function get_all_tracks()
+local function GetAllTracks()
     local count = reaper.CountTracks(0)
     local tracks = {}
     for i = 0, count - 1 do
@@ -42,8 +42,8 @@ local function get_all_tracks()
     return tracks
 end
 
-local function select_only_tracks(tracks)
-    for _, track in ipairs(get_all_tracks()) do
+local function SelectOnlyTracks(tracks)
+    for _, track in ipairs(GetAllTracks()) do
         reaper.SetTrackSelected(track, false)
     end
     for _, item in ipairs(tracks) do
@@ -51,7 +51,7 @@ local function select_only_tracks(tracks)
     end
 end
 
-local function get_selected_tracks()
+local function GetSelectedTracks()
     local count = reaper.CountSelectedTracks(0)
     local tracks = {}
     for i = 0, count - 1 do
@@ -66,32 +66,50 @@ local function main(name, func)
     reaper.Undo_EndBlock(name, -1)
 end
 
-local function get_item_take_info(itemTake)
+local function GetItemTakeInfo(itemTake)
     return {
         -- 0=normal, 1=reverse stereo, 2=downmix, 3=left, 4=right
         channelMode = reaper.GetMediaItemTakeInfo_Value(itemTake, "I_CHANMODE")
     }
 end
 
-local function get_item_info(item)
+local function GetItemInfo(item)
     local currentTake = reaper.GetMediaItemInfo_Value(item, "I_CURTAKE")
     return {
         track = reaper.GetMediaItemInfo_Value(item, "P_TRACK"),
         position = reaper.GetMediaItemInfo_Value(item, "D_POSITION"),
         length = reaper.GetMediaItemInfo_Value(item, "D_LENGTH"),
-        currentTake = get_item_take_info(reaper.GetMediaItemTake(item, currentTake))
+        snapOffset = reaper.GetMediaItemInfo_Value(item, "D_SNAPOFFSET"),
+        mute = reaper.GetMediaItemInfo_Value(item, "D_MUTE"),
+        muteActual = reaper.GetMediaItemInfo_Value(item, "D_MUTE_ACTUAL"),
+        currentTake = GetItemTakeInfo(reaper.GetMediaItemTake(item, currentTake))
     }
 end
 
-local function get_items_info(items)
+local function GetItemsInfo(items)
     local itemsInfo = {}
     for i, item in ipairs(items) do
-        itemsInfo[i] = get_item_info(item)
+        itemsInfo[i] = GetItemInfo(item)
     end
     return itemsInfo
 end
 
-local function get_track_info(track)
+local function SetItemInfo(item, info)
+    if info.position ~= nil then
+        reaper.SetMediaItemInfo_Value(item, "D_POSITION", info.position)
+    end
+    if info.length ~= nil then
+        reaper.SetMediaItemInfo_Value(item, "D_LENGTH", info.length)
+    end
+    if info.mute ~= nil then
+        reaper.SetMediaItemInfo_Value(item, "B_MUTE", info.mute)
+    end
+    if info.snapOffset ~= nil then
+        reaper.SetMediaItemInfo_Value(item, "D_SNAPOFFSET", info.snapOffset)
+    end
+end
+
+local function GetTrackInfo(track)
     local _, name = reaper.GetSetMediaTrackInfo_String(track, "P_NAME", "", false)
     return {
         mute = reaper.GetMediaTrackInfo_Value(track, "B_MUTE"),
@@ -100,17 +118,17 @@ local function get_track_info(track)
     }
 end
 
-local function get_track_name(track)
+local function GetTrackName(track)
     local _, name = reaper.GetSetMediaTrackInfo_String(track, "P_NAME", "", false)
     return name
 end
 
-local function set_track_name(track, name)
+local function SetTrackName(track, name)
     reaper.GetSetMediaTrackInfo_String(track, "P_NAME", name, true)
 end
 
-local function move_item_to_track(item, track)
-    local itemTrack = get_item_info(item).track
+local function MoveItemToTrack(item, track)
+    local itemTrack = GetItemInfo(item).track
 
     if reaper.GetTrackGUID(itemTrack) ~= reaper.GetTrackGUID(track) then
         local _, itemChunk = reaper.GetItemStateChunk(item, '')
@@ -120,21 +138,21 @@ local function move_item_to_track(item, track)
     end
 end
 
-local function get_loop_time_range()
+local function GetLoopTimeRange()
     return reaper.GetSet_LoopTimeRange2(0, false, false, 0, 0, false)
 end
 
-local function set_loop_time_range(loopStart, loopEnd)
+local function SetLoopTimeRange(loopStart, loopEnd)
     reaper.GetSet_LoopTimeRange2(0, true, true, loopStart, loopEnd, true)
 end
 
-local function extend_time_selection(seconds)
-    local loopStart, loopEnd = get_loop_time_range()
-    set_loop_time_range(loopStart, loopEnd + seconds)
+local function ExtendTimeSelection(seconds)
+    local loopStart, loopEnd = GetLoopTimeRange()
+    SetLoopTimeRange(loopStart, loopEnd + seconds)
 end
 
-local function get_descendant_tracks(track)
-    local trackInfo = get_track_info(track)
+local function GetDescendantTracks(track)
+    local trackInfo = GetTrackInfo(track)
     local trackDepth = reaper.GetTrackDepth(track)
     local descendantTracks = {}
 
@@ -149,12 +167,12 @@ local function get_descendant_tracks(track)
     return descendantTracks
 end
 
-local function get_items_in_track(track)
+local function GetItemsInTrack(track)
     local count = reaper.CountMediaItems(0)
     local items = {}
     for i = 0, count - 1 do
         local item = reaper.GetMediaItem(0, i)
-        local itemInfo = get_item_info(item)
+        local itemInfo = GetItemInfo(item)
         if reaper.GetTrackGUID(itemInfo.track) == reaper.GetTrackGUID(track) then
             items[#items + 1] = item
         end
@@ -162,37 +180,87 @@ local function get_items_in_track(track)
     return items
 end
 
-local function get_max_item_length(items)
+local function GetMaxItemLength(items)
     local maxLength = 0
 
     for _, item in ipairs(items) do
-        local itemInfo = get_item_info(item)
+        local itemInfo = GetItemInfo(item)
         maxLength = math.max(maxLength, itemInfo.length)
     end
 
     return maxLength
 end
 
+local function Approximately(x, y)
+    return math.abs(x - y) < 1e-6
+end
+
+local function GetMarkerSnapPoints()
+    local snapPoints = {0}
+
+    local function insertIfUnique(num)
+        if #snapPoints == 0 or not Approximately(num, snapPoints[#snapPoints]) then
+            snapPoints[#snapPoints + 1] = num
+        end
+    end
+
+    local projectMarkersCount = reaper.CountProjectMarkers()
+
+    for i = 0, projectMarkersCount - 1 do
+        local _, isRegion, position, regionEnd, _, _, _ = reaper.EnumProjectMarkers3(0, i)
+        insertIfUnique(position)
+        if isRegion then
+            insertIfUnique(regionEnd)
+        end
+    end
+
+    local loopStart, loopEnd = GetLoopTimeRange()
+
+    if loopStart ~= loopEnd then
+        insertIfUnique(loopStart)
+    end
+
+    return snapPoints
+end
+
+local function FindClosestNumber(numbers, target)
+    local closestIndex = 1
+    local closestPoint = numbers[1]
+
+    for i, snapPoint in ipairs(numbers) do
+        if math.abs(snapPoint - target) < math.abs(closestPoint - target) then
+            closestIndex = i
+            closestPoint = snapPoint
+        end
+    end
+
+    return closestIndex, closestPoint
+end
+
 return {
     named_on_command = named_on_command,
-    get_all_items = get_all_items,
-    get_selected_items = get_selected_items,
-    select_only_items = select_only_items,
-    get_selected_tracks = get_selected_tracks,
-    select_only_tracks = select_only_tracks,
+    GetAllItems = GetAllItems,
+    GetSelectedItems = GetSelectedItems,
+    SelectOnlyItems = SelectOnlyItems,
+    GetSelectedTracks = GetSelectedTracks,
+    SelectOnlyTracks = SelectOnlyTracks,
     main = main,
-    get_item_take_info = get_item_take_info,
-    get_item_info = get_item_info,
-    get_track_info = get_track_info,
-    get_items_info = get_items_info,
-    get_items_in_track = get_items_in_track,
-    get_all_tracks = get_all_tracks,
-    get_track_name = get_track_name,
-    set_track_name = set_track_name,
-    move_item_to_track = move_item_to_track,
-    get_loop_time_range = get_loop_time_range,
-    set_loop_time_range = set_loop_time_range,
-    extend_time_selection = extend_time_selection,
-    get_descendant_tracks = get_descendant_tracks,
-    get_max_item_length = get_max_item_length,
+    GetItemTakeInfo = GetItemTakeInfo,
+    GetItemInfo = GetItemInfo,
+    GetTrackInfo = GetTrackInfo,
+    GetItemsInfo = GetItemsInfo,
+    GetItemsInTrack = GetItemsInTrack,
+    GetAllTracks = GetAllTracks,
+    GetTrackName = GetTrackName,
+    SetTrackName = SetTrackName,
+    MoveItemToTrack = MoveItemToTrack,
+    GetLoopTimeRange = GetLoopTimeRange,
+    SetLoopTimeRange = SetLoopTimeRange,
+    ExtendTimeSelection = ExtendTimeSelection,
+    GetDescendantTracks = GetDescendantTracks,
+    GetMaxItemLength = GetMaxItemLength,
+    SetItemInfo = SetItemInfo,
+    GetMarkerSnapPoints = GetMarkerSnapPoints,
+    FindClosestNumber = FindClosestNumber,
+    Approximately = Approximately
 }

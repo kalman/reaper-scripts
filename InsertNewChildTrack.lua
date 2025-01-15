@@ -5,7 +5,7 @@ local btk = require 'btk'
 local rpr = require 'rpr'
 
 btk.main("InsertNewChildTrack", function()
-    local selectedTracks = btk.get_selected_tracks()
+    local selectedTracks = btk.GetSelectedTracks()
 
     if #selectedTracks == 0 then
         rpr.track_insert_new()

@@ -5,13 +5,13 @@ local btk = require 'btk'
 local rpr = require 'rpr'
 
 btk.main("InsertRegionForSelectedItemsAndAddToMatrix", function()
-    local selectedItems = btk.get_selected_items()
+    local selectedItems = btk.GetSelectedItems()
 
     if #selectedItems == 0 then
         return
     end
 
-    local itemsInfo = btk.get_items_info(selectedItems)
+    local itemsInfo = btk.GetItemsInfo(selectedItems)
     local startPosition = -1
     local endPosition = -1
 
@@ -27,7 +27,7 @@ btk.main("InsertRegionForSelectedItemsAndAddToMatrix", function()
     local _, regionName = reaper.GetUserInputs("Region name (or empty)?", 1, "", "")
 
     if regionName == "" then
-        regionName = btk.get_track_name(itemsInfo[1].track)
+        regionName = btk.GetTrackName(itemsInfo[1].track)
     end
 
     local regionIndex = reaper.AddProjectMarker(0, true, startPosition, endPosition, regionName, -1)

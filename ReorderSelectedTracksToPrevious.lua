@@ -7,7 +7,7 @@ local function named_on_command(command_name)
     reaper.Main_OnCommand(command_id, 0)
 end
 
-local function get_selected_tracks()
+local function GetSelectedTracks()
     local count = reaper.CountSelectedTracks(0)
     local tracks = {}
     for i = 0, count - 1 do
@@ -30,7 +30,7 @@ local function run()
     reaper.Undo_BeginBlock()
     named_on_command("_SWS_SAVESEL") -- SWS: Save current track selection
 
-    local selectedTracks = get_selected_tracks();
+    local selectedTracks = GetSelectedTracks();
 
     if #selectedTracks == 0 then
         return

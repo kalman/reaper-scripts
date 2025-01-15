@@ -65,7 +65,7 @@ local function run()
     local startCursorPosition = reaper.GetCursorPosition()
     local sourceTrack = get_item_track(first(sourceItems))
     local sourceTrackIndex = get_track_index(sourceTrack)
-    local sourceTrackName = btk.get_track_name(sourceTrack)
+    local sourceTrackName = btk.GetTrackName(sourceTrack)
     local firstItemPosition = get_item_position(first(sourceItems))
     local newTracks = {}
 
@@ -80,7 +80,7 @@ local function run()
 
         reaper.InsertTrackInProject(0, nextTrackIndex, 0)
         local newTrack = reaper.GetTrack(0, nextTrackIndex)
-        btk.set_track_name(newTrack, sourceTrackName)
+        btk.SetTrackName(newTrack, sourceTrackName)
         newTracks[#newTracks + 1] = newTrack
         nextTrackIndex = nextTrackIndex + 1
 

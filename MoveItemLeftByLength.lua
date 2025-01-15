@@ -5,16 +5,16 @@ local btk = require 'btk'
 local rpr = require 'rpr'
 
 btk.main("MoveItemLeftByLength", function()
-    local selectedItems = btk.get_selected_items()
+    local selectedItems = btk.GetSelectedItems()
 
     if #selectedItems == 0 then
         return
     end
 
-    local maxLength = btk.get_max_item_length(selectedItems)
+    local maxLength = btk.GetMaxItemLength(selectedItems)
 
     for i_, item in ipairs(selectedItems) do
-        local itemInfo = btk.get_item_info(item)
+        local itemInfo = btk.GetItemInfo(item)
         reaper.SetMediaItemInfo_Value(item, "D_POSITION", math.max(0, itemInfo.position - maxLength))
     end
 end)

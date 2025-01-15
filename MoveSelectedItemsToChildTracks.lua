@@ -30,12 +30,12 @@ local function get_track_index(track)
     return count
 end
 
-local function get_track_name(track)
+local function GetTrackName(track)
     local _, name = reaper.GetSetMediaTrackInfo_String(track, "P_NAME", "", false)
     return name
 end
 
-local function set_track_name(track, name)
+local function SetTrackName(track, name)
     reaper.GetSetMediaTrackInfo_String(track, "P_NAME", name, true)
 end
 
@@ -66,7 +66,7 @@ local function run()
     local startCursorPosition = reaper.GetCursorPosition()
     local sourceTrack = get_item_track(first(sourceItems))
     local sourceTrackIndex = get_track_index(sourceTrack)
-    local sourceTrackName = get_track_name(sourceTrack)
+    local sourceTrackName = GetTrackName(sourceTrack)
     local firstItemPosition = get_item_position(first(sourceItems))
     local newTracks = {}
 
@@ -79,7 +79,7 @@ local function run()
 
         reaper.InsertTrackInProject(0, nextTrackIndex, 0)
         local newTrack = reaper.GetTrack(0, nextTrackIndex)
-        set_track_name(newTrack, sourceTrackName)
+        SetTrackName(newTrack, sourceTrackName)
         newTracks[#newTracks + 1] = newTrack
         nextTrackIndex = nextTrackIndex + 1
         reaper.MoveMediaItemToTrack(item, newTrack)

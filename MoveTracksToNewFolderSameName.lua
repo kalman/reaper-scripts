@@ -5,7 +5,7 @@ local btk = require 'btk'
 local rpr = require 'rpr'
 
 btk.main("MoveTracksToNewFolderSameName", function()
-    local selectedTracks = btk.get_selected_tracks()
+    local selectedTracks = btk.GetSelectedTracks()
 
     if #selectedTracks == 0 then
         return
@@ -14,7 +14,7 @@ btk.main("MoveTracksToNewFolderSameName", function()
     rpr.track_move_tracks_to_new_folder()
 
     local newFolder = reaper.GetLastTouchedTrack()
-    btk.set_track_name(newFolder, btk.get_track_name(selectedTracks[1]))
+    btk.SetTrackName(newFolder, btk.GetTrackName(selectedTracks[1]))
     reaper.SetTrackColor(newFolder, reaper.GetTrackColor(selectedTracks[1]))
 
     rpr.track_rename_last_touched()
