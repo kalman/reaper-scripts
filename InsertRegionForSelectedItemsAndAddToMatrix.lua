@@ -35,4 +35,6 @@ btk.main("InsertRegionForSelectedItemsAndAddToMatrix", function()
     for _, info in ipairs(itemsInfo) do
         reaper.SetRegionRenderMatrix(0, regionIndex, info.track, 1)
     end
+
+    btk.GenerateMarkerColors(false)
 end)

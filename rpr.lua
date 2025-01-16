@@ -45,22 +45,22 @@ end
 
 local function sws_save_edit_cursor()
     -- SWS/BR: Save edit cursor position, slot 01
-    btk.named_on_command("_BR_SAVE_CURSOR_POS_SLOT_1")
+    btk.NamedCommand("_BR_SAVE_CURSOR_POS_SLOT_1")
 end
 
 local function sws_restore_edit_cursor()
     -- SWS/BR: Restore edit cursor position, slot 01
-    btk.named_on_command("_BR_RESTORE_CURSOR_POS_SLOT_1")
+    btk.NamedCommand("_BR_RESTORE_CURSOR_POS_SLOT_1")
 end
 
 local function sws_zoom_to_selected_items()
     -- SWS: Zoom to selected items
-    btk.named_on_command("_SWS_ITEMZOOM")
+    btk.NamedCommand("_SWS_ITEMZOOM")
 end
 
 local function sws_horizontal_zoom_to_selected_items()
     -- SWS: Horizontal zoom to selected items
-    btk.named_on_command("_SWS_HZOOMITEMS")
+    btk.NamedCommand("_SWS_HZOOMITEMS")
 end
 
 local function time_selection_remove()

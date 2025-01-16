@@ -34,4 +34,6 @@ btk.main("InsertNewTrackInFolder", function()
     else
         rpr.track_insert_new()
     end
+
+    btk.GenerateMarkerColors(false)
 end)

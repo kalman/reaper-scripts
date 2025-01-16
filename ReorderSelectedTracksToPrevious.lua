@@ -2,7 +2,7 @@
  * ReaScript Name: ReorderSelectedTracksToPrevious.lua
  * Author: Ben Kalman
 --]]
-local function named_on_command(command_name)
+local function NamedCommand(command_name)
     local command_id = reaper.NamedCommandLookup(command_name)
     reaper.Main_OnCommand(command_id, 0)
 end
@@ -28,7 +28,7 @@ end
 
 local function run()
     reaper.Undo_BeginBlock()
-    named_on_command("_SWS_SAVESEL") -- SWS: Save current track selection
+    NamedCommand("_SWS_SAVESEL") -- SWS: Save current track selection
 
     local selectedTracks = GetSelectedTracks();
 
@@ -45,7 +45,7 @@ local function run()
         end
     end
 
-    named_on_command("_SWS_RESTORESEL") -- SWS: Restore saved track selection
+    NamedCommand("_SWS_RESTORESEL") -- SWS: Restore saved track selection
     reaper.Undo_EndBlock("ReorderSelectedTracksToPrevious", -1)
 end
 

@@ -1,4 +1,4 @@
-local function named_on_command(command_name)
+local function NamedCommand(command_name)
     local command_id = reaper.NamedCommandLookup(command_name)
     reaper.Main_OnCommand(command_id, 0)
 end
@@ -10,6 +10,26 @@ local function GetAllItems()
         items[i + 1] = reaper.GetMediaItem(0, i)
     end
     return items
+end
+
+local function GetProjectMarkers()
+    local projectMarkers = {}
+    local projectMarkersCount = reaper.CountProjectMarkers()
+
+    for i = 0, projectMarkersCount - 1 do
+        local _, isRegion, position, regionEnd, name, regionNumber, color = reaper.EnumProjectMarkers3(0, i)
+        projectMarkers[#projectMarkers + 1] = {
+            regionIndex = i,
+            regionNumber = regionNumber,
+            position = position,
+            isRegion = isRegion,
+            regionEnd = regionEnd,
+            name = name,
+            color = color
+        }
+    end
+
+    return projectMarkers
 end
 
 local function GetSelectedItems()
@@ -151,12 +171,31 @@ local function ExtendTimeSelection(seconds)
     SetLoopTimeRange(loopStart, loopEnd + seconds)
 end
 
+local function GetChildTracks(track)
+    local trackInfo = GetTrackInfo(track)
+    local trackDepth = reaper.GetTrackDepth(track)
+    local childTracks = {}
+
+    for i = trackInfo.trackNumber1Based, reaper.CountTracks(0) do
+        local nextTrack = reaper.GetTrack(0, i)
+        local nextTrackDepth = reaper.GetTrackDepth(nextTrack)
+        if nextTrackDepth <= trackDepth then
+            break
+        end
+        if nextTrackDepth == trackDepth + 1 then
+            childTracks[#childTracks + 1] = nextTrack
+        end
+    end
+
+    return childTracks
+end
+
 local function GetDescendantTracks(track)
     local trackInfo = GetTrackInfo(track)
     local trackDepth = reaper.GetTrackDepth(track)
     local descendantTracks = {}
 
-    for i = trackInfo.trackNumber1Based, reaper.CountTracks(0) do
+    for i = trackInfo.trackNumber1Based, reaper.CountTracks(0) - 1 do
         local nextTrack = reaper.GetTrack(0, i)
         if reaper.GetTrackDepth(nextTrack) <= trackDepth then
             break
@@ -204,14 +243,8 @@ local function GetMarkerSnapPoints()
         end
     end
 
-    local projectMarkersCount = reaper.CountProjectMarkers()
-
-    for i = 0, projectMarkersCount - 1 do
-        local _, isRegion, position, regionEnd, _, _, _ = reaper.EnumProjectMarkers3(0, i)
-        insertIfUnique(position)
-        if isRegion then
-            insertIfUnique(regionEnd)
-        end
+    for _, marker in ipairs(GetProjectMarkers()) do
+        insertIfUnique(marker.position)
     end
 
     local loopStart, loopEnd = GetLoopTimeRange()
@@ -220,6 +253,7 @@ local function GetMarkerSnapPoints()
         insertIfUnique(loopStart)
     end
 
+    table.sort(snapPoints)
     return snapPoints
 end
 
@@ -237,8 +271,130 @@ local function FindClosestNumber(numbers, target)
     return closestIndex, closestPoint
 end
 
+local function RGB(r, g, b)
+    return reaper.ColorToNative(math.ceil(r), math.ceil(g), math.ceil(b)) | 0x1000000
+end
+
+local function Clamp(x, min, max)
+    if x < min then
+        return min
+    elseif x > max then
+        return max
+    else
+        return x
+    end
+end
+
+local function HSL(h, s, l)
+    -- From https://stackoverflow.com/questions/68317097/how-to-properly-convert-hsl-colors-to-rgb-colors-in-lua
+    h = Clamp(h, 0, 360) / 360
+    s = Clamp(s, 0, 1)
+    l = Clamp(l, 0, 1)
+
+    local r, g, b;
+
+    if s == 0 then
+        r, g, b = l, l, l; -- achromatic
+    else
+        local function hue2rgb(p, q, t)
+            if t < 0 then
+                t = t + 1
+            end
+            if t > 1 then
+                t = t - 1
+            end
+            if t < 1 / 6 then
+                return p + (q - p) * 6 * t
+            end
+            if t < 1 / 2 then
+                return q
+            end
+            if t < 2 / 3 then
+                return p + (q - p) * (2 / 3 - t) * 6
+            end
+            return p;
+        end
+
+        local q = l < 0.5 and l * (1 + s) or l + s - l * s;
+        local p = 2 * l - q;
+        r = hue2rgb(p, q, h + 1 / 3);
+        g = hue2rgb(p, q, h);
+        b = hue2rgb(p, q, h - 1 / 3);
+    end
+
+    return RGB(r * 255, g * 255, b * 255)
+end
+
+local function Avg(values)
+    if #values == 0 then
+        reaper.ShowConsoleMsg("Error: no values to calculate average")
+    end
+    local total = 0
+    for _, value in ipairs(values) do
+        total = total + value
+    end
+    return total / #values
+end
+
+local function Contains(values, containsValue)
+    for _, value in ipairs(values) do
+        if value == containsValue then
+            return true
+        end
+    end
+    return false
+end
+
+local function GenerateMarkerColors(regenerate)
+    local function randomHue(prevHue)
+        local hue = math.random(40, 300)
+        while math.abs(hue - prevHue) < 50 do
+            hue = math.random(40, 300)
+        end
+        return hue
+    end
+
+    local markers = GetProjectMarkers()
+    local hue = randomHue(0)
+    local darkGrey = RGB(40, 40, 40)
+    local lightGrey = RGB(140, 140, 140)
+
+    for _, track in ipairs(GetAllTracks()) do
+        reaper.SetTrackColor(track, darkGrey)
+    end
+
+    for _, marker in ipairs(markers) do
+        local markerColor = marker.color
+
+        if regenerate or markerColor == 0 then
+            markerColor = HSL(hue, 1, 0.35)
+            reaper.SetProjectMarker4(0, marker.regionNumber, marker.isRegion, marker.position, marker.regionEnd, "",
+                markerColor, 0)
+            hue = randomHue(hue, 50)
+        end
+
+        if marker.isRegion then
+            for i = 0, 100 do
+                local track = reaper.EnumRegionRenderMatrix(0, marker.regionIndex, i)
+                if track == nil then
+                    break
+                end
+
+                reaper.SetTrackColor(track, markerColor)
+
+                if reaper.GetTrackDepth(track) > 0 then
+                    local parentTrack = reaper.GetParentTrack(track)
+                    if reaper.GetTrackColor(parentTrack) == darkGrey then
+                        reaper.SetTrackColor(parentTrack, lightGrey)
+                    end
+                end
+            end
+        end
+    end
+end
+
 return {
-    named_on_command = named_on_command,
+    NamedCommand = NamedCommand,
     GetAllItems = GetAllItems,
     GetSelectedItems = GetSelectedItems,
     SelectOnlyItems = SelectOnlyItems,
@@ -257,10 +413,18 @@ return {
     GetLoopTimeRange = GetLoopTimeRange,
     SetLoopTimeRange = SetLoopTimeRange,
     ExtendTimeSelection = ExtendTimeSelection,
+    GetChildTracks = GetChildTracks,
     GetDescendantTracks = GetDescendantTracks,
     GetMaxItemLength = GetMaxItemLength,
     SetItemInfo = SetItemInfo,
     GetMarkerSnapPoints = GetMarkerSnapPoints,
     FindClosestNumber = FindClosestNumber,
-    Approximately = Approximately
+    Approximately = Approximately,
+    GetProjectMarkers = GetProjectMarkers,
+    Clamp = Clamp,
+    RGB = RGB,
+    HSL = HSL,
+    Avg = Avg,
+    Contains = Contains,
+    GenerateMarkerColors = GenerateMarkerColors,
 }

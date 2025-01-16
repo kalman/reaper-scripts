@@ -102,6 +102,8 @@ local function run()
     reaper.SetOnlyTrackSelected(sourceTrack)
     reaper.SetEditCurPos(startCursorPosition, 0, 0)
 
+    btk.GenerateMarkerColors(false)
+
     reaper.Main_OnCommand(41118, 0) -- Options: Enable auto-crossfades
     reaper.Undo_EndBlock("CopyAndMoveSelectedItemsToChildTracks", -1)
 end
