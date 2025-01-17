@@ -1,9 +1,10 @@
---[[
- * ReaScript Name: CopySelectedTrackNameToChildren.lua
- * Author: Ben Kalman
---]]
+local _, path = reaper.get_action_context()
+local folder_path = path:match('^.+[\\/]')
+package.path = folder_path .. '?.lua;'
+local btk = require 'btk'
+local rpr = require 'rpr'
 
-local function run()
+btk.main("CopySelectedTrackNameToChildren", function()
     for i = 0, reaper.CountSelectedTracks(0) - 1 do
         local selectedTrack = reaper.GetSelectedTrack(0, i)
 
@@ -16,6 +17,4 @@ local function run()
             end
         end
     end
-end
-
-run()
+end)

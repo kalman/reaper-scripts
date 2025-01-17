@@ -1,3 +1,19 @@
+local function bool2num(bool)
+    if bool then
+        return 1
+    else
+        return 0
+    end
+end
+
+local function num2bool(number)
+    if number == 0 then
+        return false
+    else
+        return true
+    end
+end
+
 local function NamedCommand(command_name)
     local command_id = reaper.NamedCommandLookup(command_name)
     reaper.Main_OnCommand(command_id, 0)
@@ -53,6 +69,10 @@ local function SelectOnlyItems(items)
     end
 end
 
+local function SelectOnlyItem(item)
+    SelectOnlyItems({item})
+end
+
 local function GetAllTracks()
     local count = reaper.CountTracks(0)
     local tracks = {}
@@ -100,8 +120,8 @@ local function GetItemInfo(item)
         position = reaper.GetMediaItemInfo_Value(item, "D_POSITION"),
         length = reaper.GetMediaItemInfo_Value(item, "D_LENGTH"),
         snapOffset = reaper.GetMediaItemInfo_Value(item, "D_SNAPOFFSET"),
-        mute = reaper.GetMediaItemInfo_Value(item, "D_MUTE"),
-        muteActual = reaper.GetMediaItemInfo_Value(item, "D_MUTE_ACTUAL"),
+        mute = num2bool(reaper.GetMediaItemInfo_Value(item, "B_MUTE")),
+        muteActual = num2bool(reaper.GetMediaItemInfo_Value(item, "B_MUTE_ACTUAL")),
         currentTake = GetItemTakeInfo(reaper.GetMediaItemTake(item, currentTake))
     }
 end
@@ -122,7 +142,7 @@ local function SetItemInfo(item, info)
         reaper.SetMediaItemInfo_Value(item, "D_LENGTH", info.length)
     end
     if info.mute ~= nil then
-        reaper.SetMediaItemInfo_Value(item, "B_MUTE", info.mute)
+        reaper.SetMediaItemInfo_Value(item, "B_MUTE", bool2num(info.mute))
     end
     if info.snapOffset ~= nil then
         reaper.SetMediaItemInfo_Value(item, "D_SNAPOFFSET", info.snapOffset)
@@ -132,19 +152,19 @@ end
 local function GetTrackInfo(track)
     local _, name = reaper.GetSetMediaTrackInfo_String(track, "P_NAME", "", false)
     return {
-        mute = reaper.GetMediaTrackInfo_Value(track, "B_MUTE"),
+        mute = num2bool(reaper.GetMediaTrackInfo_Value(track, "B_MUTE")),
         name = name,
         trackNumber1Based = reaper.GetMediaTrackInfo_Value(track, "IP_TRACKNUMBER")
     }
 end
 
-local function GetTrackName(track)
-    local _, name = reaper.GetSetMediaTrackInfo_String(track, "P_NAME", "", false)
-    return name
-end
-
-local function SetTrackName(track, name)
-    reaper.GetSetMediaTrackInfo_String(track, "P_NAME", name, true)
+local function SetTrackInfo(track, info)
+    if info.mute ~= nil then
+        reaper.SetMediaTrackInfo_Value(track, "B_MUTE", bool2num(info.mute))
+    end
+    if info.name ~= nil then
+        reaper.GetSetMediaTrackInfo_String(track, "P_NAME", info.name, true)
+    end
 end
 
 local function MoveItemToTrack(item, track)
@@ -397,6 +417,7 @@ return {
     NamedCommand = NamedCommand,
     GetAllItems = GetAllItems,
     GetSelectedItems = GetSelectedItems,
+    SelectOnlyItem = SelectOnlyItem,
     SelectOnlyItems = SelectOnlyItems,
     GetSelectedTracks = GetSelectedTracks,
     SelectOnlyTracks = SelectOnlyTracks,
@@ -404,11 +425,10 @@ return {
     GetItemTakeInfo = GetItemTakeInfo,
     GetItemInfo = GetItemInfo,
     GetTrackInfo = GetTrackInfo,
+    SetTrackInfo = SetTrackInfo,
     GetItemsInfo = GetItemsInfo,
     GetItemsInTrack = GetItemsInTrack,
     GetAllTracks = GetAllTracks,
-    GetTrackName = GetTrackName,
-    SetTrackName = SetTrackName,
     MoveItemToTrack = MoveItemToTrack,
     GetLoopTimeRange = GetLoopTimeRange,
     SetLoopTimeRange = SetLoopTimeRange,
@@ -427,4 +447,6 @@ return {
     Avg = Avg,
     Contains = Contains,
     GenerateMarkerColors = GenerateMarkerColors,
+    bool2num = bool2num,
+    num2bool = num2bool
 }

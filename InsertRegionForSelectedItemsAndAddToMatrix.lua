@@ -24,10 +24,11 @@ btk.main("InsertRegionForSelectedItemsAndAddToMatrix", function()
         end
     end
 
-    local _, regionName = reaper.GetUserInputs("Region name (or empty)?", 1, "", "")
+    local defaultName = btk.GetTrackInfo(itemsInfo[1].track).name
+    local _, regionName = reaper.GetUserInputs("Region name [" .. defaultName .. "]", 1, "", "")
 
     if regionName == "" then
-        regionName = btk.GetTrackName(itemsInfo[1].track)
+        regionName = defaultName
     end
 
     local regionIndex = reaper.AddProjectMarker(0, true, startPosition, endPosition, regionName, -1)
