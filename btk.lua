@@ -182,13 +182,24 @@ local function GetLoopTimeRange()
     return reaper.GetSet_LoopTimeRange2(0, false, false, 0, 0, false)
 end
 
+local function GetLoopTimeRangeOrCursor()
+    local loopStart, loopEnd = GetLoopTimeRange()
+
+    if loopStart == loopEnd then
+        loopStart = reaper.GetCursorPosition()
+        loopEnd = loopStart
+    end
+
+    return loopStart, loopEnd
+end
+
 local function SetLoopTimeRange(loopStart, loopEnd)
     reaper.GetSet_LoopTimeRange2(0, true, true, loopStart, loopEnd, true)
 end
 
 local function ExtendTimeSelection(seconds)
     local loopStart, loopEnd = GetLoopTimeRange()
-    SetLoopTimeRange(loopStart, loopEnd + seconds)
+    SetLoopTimeRange(loopStart, math.max(loopStart, loopEnd + seconds))
 end
 
 local function GetChildTracks(track)
@@ -413,40 +424,55 @@ local function GenerateMarkerColors(regenerate)
     end
 end
 
+local function GetAllItemsInRange(rangeStart, rangeEnd)
+    local itemsInRange = {}
+
+    for _, item in ipairs(GetAllItems()) do
+        local info = GetItemInfo(item)
+        if info.position < rangeEnd and info.position + info.length > rangeStart then
+            itemsInRange[#itemsInRange + 1] = item
+        end
+    end
+
+    return itemsInRange
+end
+
 return {
-    NamedCommand = NamedCommand,
-    GetAllItems = GetAllItems,
-    GetSelectedItems = GetSelectedItems,
-    SelectOnlyItem = SelectOnlyItem,
-    SelectOnlyItems = SelectOnlyItems,
-    GetSelectedTracks = GetSelectedTracks,
-    SelectOnlyTracks = SelectOnlyTracks,
-    main = main,
-    GetItemTakeInfo = GetItemTakeInfo,
-    GetItemInfo = GetItemInfo,
-    GetTrackInfo = GetTrackInfo,
-    SetTrackInfo = SetTrackInfo,
-    GetItemsInfo = GetItemsInfo,
-    GetItemsInTrack = GetItemsInTrack,
-    GetAllTracks = GetAllTracks,
-    MoveItemToTrack = MoveItemToTrack,
-    GetLoopTimeRange = GetLoopTimeRange,
-    SetLoopTimeRange = SetLoopTimeRange,
+    Approximately = Approximately,
+    Avg = Avg,
+    bool2num = bool2num,
+    Clamp = Clamp,
+    Contains = Contains,
     ExtendTimeSelection = ExtendTimeSelection,
+    FindClosestNumber = FindClosestNumber,
+    GenerateMarkerColors = GenerateMarkerColors,
+    GetAllItems = GetAllItems,
+    GetAllItemsInRange = GetAllItemsInRange,
+    GetAllTracks = GetAllTracks,
     GetChildTracks = GetChildTracks,
     GetDescendantTracks = GetDescendantTracks,
-    GetMaxItemLength = GetMaxItemLength,
-    SetItemInfo = SetItemInfo,
+    GetItemInfo = GetItemInfo,
+    GetItemsInfo = GetItemsInfo,
+    GetItemsInTrack = GetItemsInTrack,
+    GetItemTakeInfo = GetItemTakeInfo,
+    GetLoopTimeRange = GetLoopTimeRange,
+    GetLoopTimeRangeOrCursor = GetLoopTimeRangeOrCursor,
     GetMarkerSnapPoints = GetMarkerSnapPoints,
-    FindClosestNumber = FindClosestNumber,
-    Approximately = Approximately,
+    GetMaxItemLength = GetMaxItemLength,
     GetProjectMarkers = GetProjectMarkers,
-    Clamp = Clamp,
-    RGB = RGB,
+    GetSelectedItems = GetSelectedItems,
+    GetSelectedTracks = GetSelectedTracks,
+    GetTrackInfo = GetTrackInfo,
     HSL = HSL,
-    Avg = Avg,
-    Contains = Contains,
-    GenerateMarkerColors = GenerateMarkerColors,
-    bool2num = bool2num,
-    num2bool = num2bool
+    main = main,
+    MoveItemToTrack = MoveItemToTrack,
+    NamedCommand = NamedCommand,
+    num2bool = num2bool,
+    RGB = RGB,
+    SelectOnlyItem = SelectOnlyItem,
+    SelectOnlyItems = SelectOnlyItems,
+    SelectOnlyTracks = SelectOnlyTracks,
+    SetItemInfo = SetItemInfo,
+    SetLoopTimeRange = SetLoopTimeRange,
+    SetTrackInfo = SetTrackInfo
 }
