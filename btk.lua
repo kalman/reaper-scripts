@@ -91,6 +91,10 @@ local function SelectOnlyTracks(tracks)
     end
 end
 
+local function SelectOnlyTrack(track)
+    SelectOnlyTracks({track})
+end
+
 local function GetSelectedTracks()
     local count = reaper.CountSelectedTracks(0)
     local tracks = {}
@@ -151,10 +155,12 @@ end
 
 local function GetTrackInfo(track)
     local _, name = reaper.GetSetMediaTrackInfo_String(track, "P_NAME", "", false)
+    local trackNumber = reaper.GetMediaTrackInfo_Value(track, "IP_TRACKNUMBER")
     return {
         mute = num2bool(reaper.GetMediaTrackInfo_Value(track, "B_MUTE")),
         name = name,
-        trackNumber1Based = reaper.GetMediaTrackInfo_Value(track, "IP_TRACKNUMBER")
+        trackNumber1Based = trackNumber,
+        index = trackNumber - 1
     }
 end
 
@@ -437,6 +443,43 @@ local function GetAllItemsInRange(rangeStart, rangeEnd)
     return itemsInRange
 end
 
+local function GetTrackFolderHierarchy(track)
+    local info = GetTrackInfo(track)
+    local hierarchy = {}
+    local trackCursor = track
+
+    while true do
+        local cursorDepth = reaper.GetTrackDepth(trackCursor)
+
+        if cursorDepth == 0 then
+            break
+        end
+
+        while reaper.GetTrackDepth(trackCursor) >= cursorDepth do
+            trackCursor = reaper.GetTrack(0, GetTrackInfo(trackCursor).index - 1)
+        end
+
+        hierarchy[#hierarchy + 1] = trackCursor
+    end
+
+    return hierarchy
+end
+
+local function ShowTrackInFolderHierarchy(track)
+    local hierarchy = GetTrackFolderHierarchy(track)
+    for i, folder in ipairs(hierarchy) do
+        reaper.SetMediaTrackInfo_Value(folder, "I_FOLDERCOMPACT", 0)
+    end
+end
+
+local function Reverse(list)
+    for i = 1, math.floor(#list / 2) do
+        local t = list[i]
+        list[i] = list[#list - i + 1]
+        list[#list - i + 1] = t
+    end
+end
+
 return {
     Approximately = Approximately,
     Avg = Avg,
@@ -472,7 +515,11 @@ return {
     SelectOnlyItem = SelectOnlyItem,
     SelectOnlyItems = SelectOnlyItems,
     SelectOnlyTracks = SelectOnlyTracks,
+    SelectOnlyTrack = SelectOnlyTrack,
     SetItemInfo = SetItemInfo,
     SetLoopTimeRange = SetLoopTimeRange,
-    SetTrackInfo = SetTrackInfo
+    SetTrackInfo = SetTrackInfo,
+    GetTrackFolderHierarchy = GetTrackFolderHierarchy,
+    ShowTrackInFolderHierarchy = ShowTrackInFolderHierarchy,
+    Reverse = Reverse,
 }
