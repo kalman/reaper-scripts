@@ -160,7 +160,9 @@ local function GetTrackInfo(track)
         mute = num2bool(reaper.GetMediaTrackInfo_Value(track, "B_MUTE")),
         name = name,
         trackNumber1Based = trackNumber,
-        index = trackNumber - 1
+        index = trackNumber - 1,
+        folderCompact = reaper.GetMediaTrackInfo_Value(track, "I_FOLDERCOMPACT"),
+        folderDepth = reaper.GetMediaTrackInfo_Value(track, "I_FOLDERDEPTH")
     }
 end
 
@@ -170,6 +172,9 @@ local function SetTrackInfo(track, info)
     end
     if info.name ~= nil then
         reaper.GetSetMediaTrackInfo_String(track, "P_NAME", info.name, true)
+    end
+    if info.folderCompact ~= nil then
+        reaper.SetMediaTrackInfo_Value(track, "I_FOLDERCOMPACT", info.folderCompact)
     end
 end
 
@@ -468,7 +473,9 @@ end
 local function ShowTrackInFolderHierarchy(track)
     local hierarchy = GetTrackFolderHierarchy(track)
     for i, folder in ipairs(hierarchy) do
-        reaper.SetMediaTrackInfo_Value(folder, "I_FOLDERCOMPACT", 0)
+        SetTrackInfo(folder, {
+            folderCompact = 0
+        })
     end
 end
 
@@ -480,7 +487,65 @@ local function Reverse(list)
     end
 end
 
+local function AnyCollapsed(folders)
+    for _, folder in ipairs(folders) do
+        if GetTrackInfo(folder).folderCompact ~= 0 then
+            return true
+        end
+    end
+
+    return false
+end
+
+local function GetAllFolders()
+    local allFolders = {}
+
+    for _, track in ipairs(GetAllTracks()) do
+        if GetTrackInfo(track).folderDepth == 1 then
+            allFolders[#allFolders + 1] = track
+        end
+    end
+
+    return allFolders
+end
+
+local function GetSelectedFolders()
+    local selectedFolders = {}
+
+    for _, track in ipairs(GetSelectedTracks()) do
+        if GetTrackInfo(track).folderDepth == 1 then
+            selectedFolders[#selectedFolders + 1] = track
+        end
+    end
+
+    return selectedFolders
+end
+
+local function ToggleFolderCollapsedStateAtDepth(depth)
+    local allFolders = GetAllFolders()
+    local folders1 = {}
+
+    for _, folder in ipairs(allFolders) do
+        if reaper.GetTrackDepth(folder) < depth then
+            folders1[#folders1 + 1] = folder
+        end
+    end
+
+    for _, folder in ipairs(allFolders) do
+        SetTrackInfo(folder, {
+            folderCompact = 2
+        })
+    end
+
+    for _, folder in ipairs(folders1) do
+        SetTrackInfo(folder, {
+            folderCompact = 0
+        })
+    end
+end
+
 return {
+    AnyCollapsed = AnyCollapsed,
     Approximately = Approximately,
     Avg = Avg,
     bool2num = bool2num,
@@ -489,6 +554,7 @@ return {
     ExtendTimeSelection = ExtendTimeSelection,
     FindClosestNumber = FindClosestNumber,
     GenerateMarkerColors = GenerateMarkerColors,
+    GetAllFolders = GetAllFolders,
     GetAllItems = GetAllItems,
     GetAllItemsInRange = GetAllItemsInRange,
     GetAllTracks = GetAllTracks,
@@ -503,23 +569,25 @@ return {
     GetMarkerSnapPoints = GetMarkerSnapPoints,
     GetMaxItemLength = GetMaxItemLength,
     GetProjectMarkers = GetProjectMarkers,
+    GetSelectedFolders = GetSelectedFolders,
     GetSelectedItems = GetSelectedItems,
     GetSelectedTracks = GetSelectedTracks,
+    GetTrackFolderHierarchy = GetTrackFolderHierarchy,
     GetTrackInfo = GetTrackInfo,
     HSL = HSL,
     main = main,
     MoveItemToTrack = MoveItemToTrack,
     NamedCommand = NamedCommand,
     num2bool = num2bool,
+    Reverse = Reverse,
     RGB = RGB,
     SelectOnlyItem = SelectOnlyItem,
     SelectOnlyItems = SelectOnlyItems,
-    SelectOnlyTracks = SelectOnlyTracks,
     SelectOnlyTrack = SelectOnlyTrack,
+    SelectOnlyTracks = SelectOnlyTracks,
     SetItemInfo = SetItemInfo,
     SetLoopTimeRange = SetLoopTimeRange,
     SetTrackInfo = SetTrackInfo,
-    GetTrackFolderHierarchy = GetTrackFolderHierarchy,
     ShowTrackInFolderHierarchy = ShowTrackInFolderHierarchy,
-    Reverse = Reverse,
+    ToggleFolderCollapsedStateAtDepth = ToggleFolderCollapsedStateAtDepth
 }
