@@ -4,33 +4,32 @@ package.path = folder_path .. '?.lua;'
 local btk = require 'btk'
 local rpr = require 'rpr'
 
-local function selectAllItemsInTrack(track)
+local function SelectAllItemsInTrack(track)
     for _, item in ipairs(btk.GetItemsInTrack(track)) do
         reaper.SetMediaItemSelected(item, true)
     end
+
+    btk.ShowTrackInFolderHierarchy(track)
 end
 
 btk.main("ZoomToSelectedItemOrAllOnTrack", function()
     local selectedItems = btk.GetSelectedItems()
-    local unselectItems = false
 
     if #selectedItems == 0 then
         for _, track in ipairs(btk.GetSelectedTracks()) do
-            selectAllItemsInTrack(track)
+            SelectAllItemsInTrack(track)
+
             for _, descTrack in ipairs(btk.GetDescendantTracks(track)) do
-                selectAllItemsInTrack(descTrack)
+                SelectAllItemsInTrack(descTrack)
             end
         end
-
-        selectedItems = btk.GetSelectedItems()
-        unselectItems = true
+    else
+        for _, selectedItem in ipairs(selectedItems) do
+            local itemInfo = btk.GetItemInfo(selectedItem)
+            btk.ShowTrackInFolderHierarchy(itemInfo.track)
+        end
     end
 
-    if #selectedItems > 0 then
-        rpr.sws_zoom_to_selected_items()
-    end
-
-    if unselectItems then
-        rpr.item_unselect_all()
-    end
+    rpr.sws_zoom_to_selected_items()
+    btk.SelectOnlyItems(selectedItems)
 end)
