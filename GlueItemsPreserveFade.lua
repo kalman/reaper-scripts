@@ -4,16 +4,8 @@ package.path = folder_path .. '?.lua;'
 local btk = require 'btk'
 local rpr = require 'rpr'
 
-btk.main("GlueItemsWithBackup", function()
+btk.main("GlueItemsPreserveFade", function()
     local selectedItems = btk.GetSelectedItems()
-
-    if #selectedItems == 0 then
-        return
-    end
-
-    rpr.item_duplicate()
-    rpr.item_mute()
-
     local selectedItemsByTrack = btk.SplitItemsByTrack(selectedItems)
     local gluedItems = {}
 

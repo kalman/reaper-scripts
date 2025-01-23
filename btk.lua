@@ -118,15 +118,23 @@ local function GetItemTakeInfo(itemTake)
 end
 
 local function GetItemInfo(item)
+    local track = reaper.GetMediaItemInfo_Value(item, "P_TRACK")
     local currentTake = reaper.GetMediaItemInfo_Value(item, "I_CURTAKE")
     return {
-        track = reaper.GetMediaItemInfo_Value(item, "P_TRACK"),
+        track = track,
+        trackGUID = reaper.GetTrackGUID(track),
         position = reaper.GetMediaItemInfo_Value(item, "D_POSITION"),
         length = reaper.GetMediaItemInfo_Value(item, "D_LENGTH"),
         snapOffset = reaper.GetMediaItemInfo_Value(item, "D_SNAPOFFSET"),
         mute = num2bool(reaper.GetMediaItemInfo_Value(item, "B_MUTE")),
         muteActual = num2bool(reaper.GetMediaItemInfo_Value(item, "B_MUTE_ACTUAL")),
-        currentTake = GetItemTakeInfo(reaper.GetMediaItemTake(item, currentTake))
+        currentTake = GetItemTakeInfo(reaper.GetMediaItemTake(item, currentTake)),
+        fadeInLength = reaper.GetMediaItemInfo_Value(item, "D_FADEINLEN"),
+        fadeOutLength = reaper.GetMediaItemInfo_Value(item, "D_FADEOUTLEN"),
+        fadeInCurvature = reaper.GetMediaItemInfo_Value(item, "D_FADEINDIR"),
+        fadeOutCurvature = reaper.GetMediaItemInfo_Value(item, "D_FADEOUTDIR"),
+        fadeInShape = reaper.GetMediaItemInfo_Value(item, "C_FADEINSHAPE"),
+        fadeOutShape = reaper.GetMediaItemInfo_Value(item, "C_FADEOUTSHAPE")
     }
 end
 
@@ -150,6 +158,24 @@ local function SetItemInfo(item, info)
     end
     if info.snapOffset ~= nil then
         reaper.SetMediaItemInfo_Value(item, "D_SNAPOFFSET", info.snapOffset)
+    end
+    if info.fadeInLength ~= nil then
+        reaper.SetMediaItemInfo_Value(item, "D_FADEINLEN", info.fadeInLength)
+    end
+    if info.fadeOutLength ~= nil then
+        reaper.SetMediaItemInfo_Value(item, "D_FADEOUTLEN", info.fadeOutLength)
+    end
+    if info.fadeInCurvature ~= nil then
+        reaper.SetMediaItemInfo_Value(item, "D_FADEINDIR", info.fadeInCurvature)
+    end
+    if info.fadeOutCurvature ~= nil then
+        reaper.SetMediaItemInfo_Value(item, "D_FADEOUTDIR", info.fadeOutCurvature)
+    end
+    if info.fadeInShape ~= nil then
+        reaper.SetMediaItemInfo_Value(item, "C_FADEINSHAPE", info.fadeInShape)
+    end
+    if info.fadeOutShape ~= nil then
+        reaper.SetMediaItemInfo_Value(item, "C_FADEOUTSHAPE", info.fadeOutShape)
     end
 end
 
@@ -659,6 +685,68 @@ local function DeleteTrackRecursive(track)
     SelectOnlyTracks(selectedTracks)
 end
 
+local function SplitItemsByTrack(items)
+    local itemsByTrack = {}
+    local splitItems = {}
+
+    for _, item in ipairs(items) do
+        local trackGUID = GetItemInfo(item).trackGUID
+        local trackItems = itemsByTrack[trackGUID]
+        if trackItems == nil then
+            trackItems = {}
+            itemsByTrack[trackGUID] = trackItems
+            splitItems[#splitItems + 1] = trackItems
+        end
+        trackItems[#trackItems + 1] = item
+    end
+
+    return splitItems
+end
+
+local function GlueItemsPreserveFade(items)
+    local firstItem = items[1]
+    local firstItemInfo = GetItemInfo(firstItem)
+    local lastItem = firstItem
+    local lastItemInfo = firstItemInfo
+
+    for i = 2, #items do
+        local item = items[i]
+        local itemInfo = GetItemInfo(item)
+
+        if itemInfo.position < firstItemInfo.position then
+            firstItem = item
+            firstItemInfo = itemInfo
+        end
+
+        if itemInfo.position + itemInfo.length > lastItemInfo.position + lastItemInfo.length then
+            lastItem = item
+            lastItemInfo = itemInfo
+        end
+    end
+
+    SetItemInfo(firstItem, {
+        fadeInLength = 0
+    })
+    SetItemInfo(lastItem, {
+        fadeOutLength = 0
+    })
+
+    SelectOnlyItems(items)
+    rpr.item_glue()
+    local gluedItem = GetSelectedItems()[1]
+
+    SetItemInfo(gluedItem, {
+        fadeInLength = firstItemInfo.fadeInLength,
+        fadeInShape = firstItemInfo.fadeInShape,
+        fadeInCurvature = firstItemInfo.fadeInCurvature,
+        fadeOutLength = lastItemInfo.fadeOutLength,
+        fadeOutShape = lastItemInfo.fadeOutShape,
+        fadeOutCurvature = lastItemInfo.fadeOutCurvature
+    })
+
+    return gluedItem
+end
+
 return {
     AnyCollapsed = AnyCollapsed,
     Approximately = Approximately,
@@ -692,6 +780,7 @@ return {
     GetSelectedTracks = GetSelectedTracks,
     GetTrackFolderHierarchy = GetTrackFolderHierarchy,
     GetTrackInfo = GetTrackInfo,
+    GlueItemsPreserveFade = GlueItemsPreserveFade,
     HasLoopTimeRange = HasLoopTimeRange,
     HSL = HSL,
     main = main,
@@ -708,5 +797,6 @@ return {
     SetLoopTimeRange = SetLoopTimeRange,
     SetTrackInfo = SetTrackInfo,
     ShowTrackInFolderHierarchy = ShowTrackInFolderHierarchy,
+    SplitItemsByTrack = SplitItemsByTrack,
     ToggleFolderCollapsedStateAtDepth = ToggleFolderCollapsedStateAtDepth
 }
