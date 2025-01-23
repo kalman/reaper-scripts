@@ -29,7 +29,11 @@ local function UnbakeTrackVariations(track)
 
     for i, trackChild in ipairs(trackChildren) do
         if i <= #originalTrackChildren then
-            btk.CopyTrackRegionRenderMatrix(trackChild, originalTrackChildren[i])
+            local originalTrackChild = originalTrackChildren[i]
+            btk.CopyTrackRegionRenderMatrix(trackChild, originalTrackChild)
+            btk.SetTrackInfo(originalTrackChild, {
+                mute = btk.GetTrackInfo(trackChild).mute
+            })
         end
     end
 
