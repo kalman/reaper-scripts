@@ -1,7 +1,7 @@
-local _, path = reaper.get_action_context()
-local folder_path = path:match('^.+[\\/]')
-package.path = folder_path .. '?.lua;'
-local btk = require 'btk'
+local function NamedCommand(command_name)
+    local command_id = reaper.NamedCommandLookup(command_name)
+    reaper.Main_OnCommand(command_id, 0)
+end
 
 local function item_duplicate()
     -- Item: Duplicate items
@@ -11,6 +11,11 @@ end
 local function item_mute()
     -- Item properties: Mute
     reaper.Main_OnCommand(40719, 0)
+end
+
+local function item_remove()
+    -- Item: Remove items
+    reaper.Main_OnCommand(40006, 0)
 end
 
 local function item_glue()
@@ -45,22 +50,22 @@ end
 
 local function sws_save_edit_cursor()
     -- SWS/BR: Save edit cursor position, slot 01
-    btk.NamedCommand("_BR_SAVE_CURSOR_POS_SLOT_1")
+    NamedCommand("_BR_SAVE_CURSOR_POS_SLOT_1")
 end
 
 local function sws_restore_edit_cursor()
     -- SWS/BR: Restore edit cursor position, slot 01
-    btk.NamedCommand("_BR_RESTORE_CURSOR_POS_SLOT_1")
+    NamedCommand("_BR_RESTORE_CURSOR_POS_SLOT_1")
 end
 
 local function sws_zoom_to_selected_items()
     -- SWS: Zoom to selected items
-    btk.NamedCommand("_SWS_ITEMZOOM")
+    NamedCommand("_SWS_ITEMZOOM")
 end
 
 local function sws_horizontal_zoom_to_selected_items()
     -- SWS: Horizontal zoom to selected items
-    btk.NamedCommand("_SWS_HZOOMITEMS")
+    NamedCommand("_SWS_HZOOMITEMS")
 end
 
 local function time_selection_remove()
@@ -107,6 +112,7 @@ return {
     item_duplicate = item_duplicate,
     item_glue = item_glue,
     item_mute = item_mute,
+    item_remove = item_remove,
     item_select_all = item_select_all,
     item_select_all_in_track = item_select_all_in_track,
     item_select_all_in_time_selection = item_select_all_in_time_selection,

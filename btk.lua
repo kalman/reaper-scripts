@@ -1,3 +1,8 @@
+local _, path = reaper.get_action_context()
+local folder_path = path:match('^.+[\\/]')
+package.path = folder_path .. '?.lua;'
+local rpr = require 'rpr'
+
 local function bool2num(bool)
     if bool then
         return 1
@@ -12,11 +17,6 @@ local function num2bool(number)
     else
         return true
     end
-end
-
-local function NamedCommand(command_name)
-    local command_id = reaper.NamedCommandLookup(command_name)
-    reaper.Main_OnCommand(command_id, 0)
 end
 
 local function GetAllItems()
@@ -86,8 +86,8 @@ local function SelectOnlyTracks(tracks)
     for _, track in ipairs(GetAllTracks()) do
         reaper.SetTrackSelected(track, false)
     end
-    for _, item in ipairs(tracks) do
-        reaper.SetTrackSelected(item, true)
+    for _, track in ipairs(tracks) do
+        reaper.SetTrackSelected(track, true)
     end
 end
 
@@ -191,6 +191,11 @@ end
 
 local function GetLoopTimeRange()
     return reaper.GetSet_LoopTimeRange2(0, false, false, 0, 0, false)
+end
+
+local function HasLoopTimeRange()
+    local loopStart, loopEnd = GetLoopTimeRange()
+    return loopStart ~= loopEnd
 end
 
 local function GetLoopTimeRangeOrCursor()
@@ -435,6 +440,21 @@ local function GenerateMarkerColors(regenerate)
     end
 end
 
+local function CopyTrackRegionRenderMatrix(fromTrack, toTrack)
+    for _, marker in ipairs(GetProjectMarkers()) do
+        if marker.isRegion then
+            for i = 0, 100 do
+                local track = reaper.EnumRegionRenderMatrix(0, marker.regionIndex, i)
+                if track == nil then
+                    break
+                elseif track == fromTrack then
+                    reaper.SetRegionRenderMatrix(0, marker.regionIndex, toTrack, 1)
+                end
+            end
+        end
+    end
+end
+
 local function GetAllItemsInRange(rangeStart, rangeEnd)
     local itemsInRange = {}
 
@@ -544,13 +564,111 @@ local function ToggleFolderCollapsedStateAtDepth(depth)
     end
 end
 
+local function Concat(l, r)
+    local result = {}
+    for _, v in ipairs(l) do
+        result[#result + 1] = v
+    end
+    for _, v in ipairs(r) do
+        result[#result + 1] = v
+    end
+    return result
+end
+
+local function RenderSelectionOrSelectedItems(stereo, intoPreviousTrack, intoSelf)
+    local selectedTracks = GetSelectedTracks()
+
+    if #selectedTracks == 0 then
+        return
+    end
+
+    local track = selectedTracks[1]
+    reaper.SetOnlyTrackSelected(selectedTracks[1])
+    local trackInfo = GetTrackInfo(track)
+    local loopStart, loopEnd = reaper.GetSet_LoopTimeRange2(0, false, false, 0, 0, false)
+    local loopItems = nil
+
+    if loopStart == loopEnd then
+        loopItems = GetSelectedItems()
+        if #loopItems == 0 then
+            return
+        end
+        rpr.sws_save_edit_cursor()
+        rpr.time_selection_set_to_items()
+        ExtendTimeSelection(1)
+    end
+
+    if stereo then
+        rpr.track_render_selected_area_to_stereo()
+    else
+        rpr.track_render_selected_area_to_mono()
+    end
+
+    local renderedTrack = GetSelectedTracks()[1]
+
+    if intoPreviousTrack and trackInfo.trackNumber1Based > 1 then
+        -- GetTrack is 0-based, trackNumber1Based is 1-based.
+        local originalPreviousTrack = reaper.GetTrack(0, trackInfo.trackNumber1Based - 2)
+        for _, item in ipairs(GetItemsInTrack(renderedTrack)) do
+            MoveItemToTrack(item, originalPreviousTrack)
+        end
+        reaper.DeleteTrack(renderedTrack)
+    elseif intoSelf then
+        reaper.SetOnlyTrackSelected(track)
+        rpr.item_select_all_in_track()
+        rpr.item_remove()
+        for _, item in ipairs(GetItemsInTrack(renderedTrack)) do
+            MoveItemToTrack(item, track)
+        end
+        reaper.DeleteTrack(renderedTrack)
+    end
+
+    if loopItems then
+        for _, item in ipairs(loopItems) do
+            reaper.SetMediaItemInfo_Value(item, "B_MUTE", 1)
+        end
+    end
+
+    if loopStart == loopEnd then
+        reaper.GetSet_LoopTimeRange2(0, true, true, loopStart, loopEnd, false)
+        rpr.sws_restore_edit_cursor()
+
+    end
+
+    SetTrackInfo(track, {
+        mute = trackInfo.mute
+    })
+
+    SelectOnlyTracks(selectedTracks)
+end
+
+local function DeleteTrackRecursive(track)
+    local selectedTracks = GetSelectedTracks()
+
+    local function Inner(deleteTrack)
+        for _, child in ipairs(GetChildTracks(deleteTrack)) do
+            Inner(child)
+        end
+
+        SelectOnlyTrack(deleteTrack)
+        reaper.ReorderSelectedTracks(1, 0)
+        reaper.DeleteTrack(deleteTrack)
+    end
+
+    Inner(track)
+    SelectOnlyTracks(selectedTracks)
+end
+
 return {
     AnyCollapsed = AnyCollapsed,
     Approximately = Approximately,
     Avg = Avg,
     bool2num = bool2num,
     Clamp = Clamp,
+    Concat = Concat,
     Contains = Contains,
+    CopyTrackRegionRenderMatrix = CopyTrackRegionRenderMatrix,
+    DeleteTrackRecursive = DeleteTrackRecursive,
     ExtendTimeSelection = ExtendTimeSelection,
     FindClosestNumber = FindClosestNumber,
     GenerateMarkerColors = GenerateMarkerColors,
@@ -574,11 +692,12 @@ return {
     GetSelectedTracks = GetSelectedTracks,
     GetTrackFolderHierarchy = GetTrackFolderHierarchy,
     GetTrackInfo = GetTrackInfo,
+    HasLoopTimeRange = HasLoopTimeRange,
     HSL = HSL,
     main = main,
     MoveItemToTrack = MoveItemToTrack,
-    NamedCommand = NamedCommand,
     num2bool = num2bool,
+    RenderSelectionOrSelectedItems = RenderSelectionOrSelectedItems,
     Reverse = Reverse,
     RGB = RGB,
     SelectOnlyItem = SelectOnlyItem,

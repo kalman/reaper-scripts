@@ -3,7 +3,8 @@ local folder_path = path:match('^.+[\\/]')
 package.path = folder_path .. '?.lua;'
 local btk = require 'btk'
 local rpr = require 'rpr'
+local impl = require 'BakeVariationsImpl'
 
-btk.main("RenderSelectionOrSelectedItemsStereo", function()
-    btk.RenderSelectionOrSelectedItems(true, true, false)
+btk.main("BakeVariationsMono", function()
+    impl.Run(true)
 end)
