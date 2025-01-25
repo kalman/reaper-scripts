@@ -239,6 +239,12 @@ local function SetLoopTimeRange(loopStart, loopEnd)
     reaper.GetSet_LoopTimeRange2(0, true, true, loopStart, loopEnd, true)
 end
 
+local function SetLoopTimeRangeAndCursor(loopStart, loopEnd)
+    reaper.GetSet_LoopTimeRange2(0, true, true, loopStart, loopEnd, true)
+    local cursor = reaper.GetCursorPosition()
+    reaper.MoveEditCursor(loopEnd - cursor, false)
+end
+
 local function ExtendTimeSelection(seconds)
     local loopStart, loopEnd = GetLoopTimeRange()
     SetLoopTimeRange(loopStart, math.max(loopStart, loopEnd + seconds))
@@ -419,7 +425,21 @@ local function Contains(values, containsValue)
 end
 
 local function GenerateMarkerColors(regenerate)
-    local function randomHue(prevHue)
+    local markers = GetProjectMarkers()
+    local foundRegionMatrixEntry = false
+
+    for _, marker in ipairs(markers) do
+        if marker.isRegion and reaper.EnumRegionRenderMatrix(0, marker.regionIndex, 0) == nil then
+            foundRegionMatrixEntry = true
+            break
+        end
+    end
+
+    if not foundRegionMatrixEntry then
+        return
+    end
+
+    local function RandomHue(prevHue)
         local hue = math.random(40, 300)
         while math.abs(hue - prevHue) < 50 do
             hue = math.random(40, 300)
@@ -427,23 +447,28 @@ local function GenerateMarkerColors(regenerate)
         return hue
     end
 
-    local markers = GetProjectMarkers()
-    local hue = randomHue(0)
-    local darkGrey = RGB(40, 40, 40)
-    local lightGrey = RGB(140, 140, 140)
+    local function BlackTint(tint)
+        local r, g, b = reaper.ColorFromNative(tint)
+        return reaper.ColorToNative(math.ceil(r / 8), math.ceil(g / 8), math.ceil(b / 8))
+    end
+
+    local hue = RandomHue(0)
+    local regionedTracks = {}
+    local defaultColor = RGB(255, 0, 0)
 
     for _, track in ipairs(GetAllTracks()) do
-        reaper.SetTrackColor(track, darkGrey)
+        reaper.SetMediaTrackInfo_Value(track, "I_CUSTOMCOLOR", 0)
+        defaultColor = reaper.GetTrackColor(track)
     end
 
     for _, marker in ipairs(markers) do
         local markerColor = marker.color
 
         if regenerate or markerColor == 0 then
-            markerColor = HSL(hue, 1, 0.35)
+            markerColor = HSL(hue, 1, 0.5)
             reaper.SetProjectMarker4(0, marker.regionNumber, marker.isRegion, marker.position, marker.regionEnd, "",
                 markerColor, 0)
-            hue = randomHue(hue, 50)
+            hue = RandomHue(hue, 50)
         end
 
         if marker.isRegion then
@@ -455,10 +480,15 @@ local function GenerateMarkerColors(regenerate)
 
                 reaper.SetTrackColor(track, markerColor)
 
+                local trackGUID = reaper.GetTrackGUID(track)
+                regionedTracks[trackGUID] = true
+
                 if reaper.GetTrackDepth(track) > 0 then
                     local parentTrack = reaper.GetParentTrack(track)
-                    if reaper.GetTrackColor(parentTrack) == darkGrey then
-                        reaper.SetTrackColor(parentTrack, lightGrey)
+                    local parentGUID = reaper.GetTrackGUID(parentTrack)
+
+                    if regionedTracks[parentGUID] ~= true then
+                        reaper.SetTrackColor(parentTrack, BlackTint(markerColor))
                     end
                 end
             end
@@ -795,6 +825,7 @@ return {
     SelectOnlyTracks = SelectOnlyTracks,
     SetItemInfo = SetItemInfo,
     SetLoopTimeRange = SetLoopTimeRange,
+    SetLoopTimeRangeAndCursor = SetLoopTimeRangeAndCursor,
     SetTrackInfo = SetTrackInfo,
     ShowTrackInFolderHierarchy = ShowTrackInFolderHierarchy,
     SplitItemsByTrack = SplitItemsByTrack,
