@@ -111,9 +111,11 @@ local function main(name, func)
 end
 
 local function GetItemTakeInfo(itemTake)
+    local _, name = reaper.GetSetMediaItemTakeInfo_String(itemTake, "P_NAME", "", false)
     return {
         -- 0=normal, 1=reverse stereo, 2=downmix, 3=left, 4=right
-        channelMode = reaper.GetMediaItemTakeInfo_Value(itemTake, "I_CHANMODE")
+        channelMode = reaper.GetMediaItemTakeInfo_Value(itemTake, "I_CHANMODE"),
+        name = name
     }
 end
 
@@ -548,7 +550,7 @@ end
 
 local function ShowTrackInFolderHierarchy(track)
     local hierarchy = GetTrackFolderHierarchy(track)
-    for i, folder in ipairs(hierarchy) do
+    for _, folder in ipairs(hierarchy) do
         SetTrackInfo(folder, {
             folderCompact = 0
         })
