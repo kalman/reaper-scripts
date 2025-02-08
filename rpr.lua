@@ -108,6 +108,21 @@ local function track_select_all()
     reaper.Main_OnCommand(40296, 0)
 end
 
+local function view_move_cursor_left_one_pixel()
+    -- View: Move cursor left one pixel
+    reaper.Main_OnCommand(40104, 0)
+end
+
+local function view_move_cursor_right_one_pixel()
+    -- View: Move cursor right one pixel
+    reaper.Main_OnCommand(40105, 0)
+end
+
+local function view_expand_selected_track_height()
+    -- View: Expand selected track height, minimize others
+    reaper.Main_OnCommand(40723, 0)
+end
+
 return {
     item_duplicate = item_duplicate,
     item_glue = item_glue,
@@ -129,5 +144,8 @@ return {
     track_rename_last_touched = track_rename_last_touched,
     track_render_selected_area_to_mono = track_render_selected_area_to_mono,
     track_render_selected_area_to_stereo = track_render_selected_area_to_stereo,
-    track_select_all = track_select_all
+    track_select_all = track_select_all,
+    view_expand_selected_track_height = view_expand_selected_track_height,
+    view_move_cursor_left_one_pixel = view_move_cursor_left_one_pixel,
+    view_move_cursor_right_one_pixel = view_move_cursor_right_one_pixel
 }

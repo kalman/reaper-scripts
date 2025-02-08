@@ -3,6 +3,21 @@ local folder_path = path:match('^.+[\\/]')
 package.path = folder_path .. '?.lua;'
 local rpr = require 'rpr'
 
+local function Log(...)
+    local consoleMsg = ""
+    for _, arg in ipairs(table.pack(...)) do
+        if consoleMsg ~= "" then
+            consoleMsg = consoleMsg .. " "
+        end
+        if arg == nil then
+            consoleMsg = consoleMsg .. "(nil)"
+        else
+            consoleMsg = consoleMsg .. tostring(arg)
+        end
+    end
+    reaper.ShowConsoleMsg(consoleMsg .. "\n")
+end
+
 local function bool2num(bool)
     if bool then
         return 1
@@ -104,6 +119,17 @@ local function GetSelectedTracks()
     return tracks
 end
 
+local function IterSelectedTracks()
+    local i = 0
+    local selectedTracks = GetSelectedTracks()
+    return function()
+        i = i + 1
+        if i <= #selectedTracks then
+            return selectedTracks[i]
+        end
+    end
+end
+
 local function main(name, func)
     reaper.Undo_BeginBlock()
     func()
@@ -115,13 +141,14 @@ local function GetItemTakeInfo(itemTake)
     return {
         -- 0=normal, 1=reverse stereo, 2=downmix, 3=left, 4=right
         channelMode = reaper.GetMediaItemTakeInfo_Value(itemTake, "I_CHANMODE"),
-        name = name
+        name = name,
+        startOffset = reaper.GetMediaItemTakeInfo_Value(itemTake, "D_STARTOFFS")
     }
 end
 
 local function GetItemInfo(item)
     local track = reaper.GetMediaItemInfo_Value(item, "P_TRACK")
-    local currentTake = reaper.GetMediaItemInfo_Value(item, "I_CURTAKE")
+    local take = reaper.GetActiveTake(item)
     return {
         track = track,
         trackGUID = reaper.GetTrackGUID(track),
@@ -130,7 +157,8 @@ local function GetItemInfo(item)
         snapOffset = reaper.GetMediaItemInfo_Value(item, "D_SNAPOFFSET"),
         mute = num2bool(reaper.GetMediaItemInfo_Value(item, "B_MUTE")),
         muteActual = num2bool(reaper.GetMediaItemInfo_Value(item, "B_MUTE_ACTUAL")),
-        currentTake = GetItemTakeInfo(reaper.GetMediaItemTake(item, currentTake)),
+        take = take,
+        takeInfo = GetItemTakeInfo(take),
         fadeInLength = reaper.GetMediaItemInfo_Value(item, "D_FADEINLEN"),
         fadeOutLength = reaper.GetMediaItemInfo_Value(item, "D_FADEOUTLEN"),
         fadeInCurvature = reaper.GetMediaItemInfo_Value(item, "D_FADEINDIR"),
@@ -428,10 +456,11 @@ end
 
 local function GenerateMarkerColors(regenerate)
     local markers = GetProjectMarkers()
+
     local foundRegionMatrixEntry = false
 
     for _, marker in ipairs(markers) do
-        if marker.isRegion and reaper.EnumRegionRenderMatrix(0, marker.regionIndex, 0) == nil then
+        if marker.isRegion and reaper.EnumRegionRenderMatrix(0, marker.regionNumber, 0) ~= nil then
             foundRegionMatrixEntry = true
             break
         end
@@ -475,7 +504,7 @@ local function GenerateMarkerColors(regenerate)
 
         if marker.isRegion then
             for i = 0, 100 do
-                local track = reaper.EnumRegionRenderMatrix(0, marker.regionIndex, i)
+                local track = reaper.EnumRegionRenderMatrix(0, marker.regionNumber, i)
                 if track == nil then
                     break
                 end
@@ -489,9 +518,9 @@ local function GenerateMarkerColors(regenerate)
                     local parentTrack = reaper.GetParentTrack(track)
                     local parentGUID = reaper.GetTrackGUID(parentTrack)
 
-                    if regionedTracks[parentGUID] ~= true then
-                        reaper.SetTrackColor(parentTrack, BlackTint(markerColor))
-                    end
+                    -- if regionedTracks[parentGUID] ~= true then
+                    --     reaper.SetTrackColor(parentTrack, BlackTint(markerColor))
+                    -- end
                 end
             end
         end
@@ -511,6 +540,29 @@ local function CopyTrackRegionRenderMatrix(fromTrack, toTrack)
             end
         end
     end
+end
+
+local function GetRenderedTracks()
+    local trackGUIDSet = {}
+    local tracks = {}
+
+    for _, marker in ipairs(GetProjectMarkers()) do
+        if marker.isRegion then
+            for i = 0, 100 do
+                local track = reaper.EnumRegionRenderMatrix(0, marker.regionIndex, i)
+                if track == nil then
+                    break
+                end
+                local trackGUID = reaper.GetTrackGUID(track)
+                if trackGUID[trackGUID] == nil then
+                    trackGUIDSet[trackGUID] = track
+                    tracks[#tracks + 1] = track
+                end
+            end
+        end
+    end
+
+    return tracks, trackGUIDSet
 end
 
 local function GetAllItemsInRange(rangeStart, rangeEnd)
@@ -554,6 +606,12 @@ local function ShowTrackInFolderHierarchy(track)
         SetTrackInfo(folder, {
             folderCompact = 0
         })
+    end
+end
+
+local function ShowTracksInFolderHierarchy(tracks)
+    for _, track in ipairs(tracks) do
+        ShowTrackInFolderHierarchy(track)
     end
 end
 
@@ -779,6 +837,19 @@ local function GlueItemsPreserveFade(items)
     return gluedItem
 end
 
+local function FirstItemPosition(items)
+    local firstItemPosition = -1
+
+    for _, item in ipairs(items) do
+        local info = GetItemInfo(item)
+        if firstItemPosition == -1 or info.position < firstItemPosition then
+            firstItemPosition = info.position
+        end
+    end
+
+    return firstItemPosition
+end
+
 return {
     AnyCollapsed = AnyCollapsed,
     Approximately = Approximately,
@@ -791,6 +862,7 @@ return {
     DeleteTrackRecursive = DeleteTrackRecursive,
     ExtendTimeSelection = ExtendTimeSelection,
     FindClosestNumber = FindClosestNumber,
+    FirstItemPosition = FirstItemPosition,
     GenerateMarkerColors = GenerateMarkerColors,
     GetAllFolders = GetAllFolders,
     GetAllItems = GetAllItems,
@@ -807,6 +879,7 @@ return {
     GetMarkerSnapPoints = GetMarkerSnapPoints,
     GetMaxItemLength = GetMaxItemLength,
     GetProjectMarkers = GetProjectMarkers,
+    GetRenderedTracks = GetRenderedTracks,
     GetSelectedFolders = GetSelectedFolders,
     GetSelectedItems = GetSelectedItems,
     GetSelectedTracks = GetSelectedTracks,
@@ -815,6 +888,8 @@ return {
     GlueItemsPreserveFade = GlueItemsPreserveFade,
     HasLoopTimeRange = HasLoopTimeRange,
     HSL = HSL,
+    IterSelectedTracks = IterSelectedTracks,
+    Log = Log,
     main = main,
     MoveItemToTrack = MoveItemToTrack,
     num2bool = num2bool,
@@ -830,6 +905,7 @@ return {
     SetLoopTimeRangeAndCursor = SetLoopTimeRangeAndCursor,
     SetTrackInfo = SetTrackInfo,
     ShowTrackInFolderHierarchy = ShowTrackInFolderHierarchy,
+    ShowTracksInFolderHierarchy = ShowTracksInFolderHierarchy,
     SplitItemsByTrack = SplitItemsByTrack,
     ToggleFolderCollapsedStateAtDepth = ToggleFolderCollapsedStateAtDepth
 }

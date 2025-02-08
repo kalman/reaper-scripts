@@ -8,6 +8,8 @@ local function selectAllItemsInTrack(track)
     for _, item in ipairs(btk.GetItemsInTrack(track)) do
         reaper.SetMediaItemSelected(item, true)
     end
+
+    btk.ShowTrackInFolderHierarchy(track)
 end
 
 btk.main("ZoomToItemsInTimeSelection", function()

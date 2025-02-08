@@ -5,16 +5,12 @@ local btk = require 'btk'
 local rpr = require 'rpr'
 
 btk.main("CopySelectedTrackNameToChildren", function()
-    for i = 0, reaper.CountSelectedTracks(0) - 1 do
-        local selectedTrack = reaper.GetSelectedTrack(0, i)
-
-        for j = 0, reaper.CountTracks(0) - 1 do
-            local track = reaper.GetTrack(0, j)
-
-            if reaper.GetParentTrack(track) == selectedTrack then
-                local ok, name = reaper.GetTrackName(selectedTrack)
-                reaper.GetSetMediaTrackInfo_String(track, "P_NAME", name, true)
-            end
+    for selectedTrack in btk.IterSelectedTracks() do
+        local ok, name = reaper.GetTrackName(selectedTrack)
+        for i, childTrack in ipairs(btk.GetChildTracks(selectedTrack)) do
+            btk.SetTrackInfo(childTrack, {
+                name = name .. "(" .. i .. ")"
+            })
         end
     end
 end)

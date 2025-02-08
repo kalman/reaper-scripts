@@ -14,8 +14,7 @@ btk.main("DebugSomeThings", function()
         for i, item in ipairs(selectedItems) do
             local info = btk.GetItemInfo(item)
             local trackInfo = btk.GetTrackInfo(info.track)
-            reaper.ShowConsoleMsg(" item#" .. i .. ": " .. info.currentTake.name .. " (track: " .. trackInfo.name ..
-                                      ")\n")
+            reaper.ShowConsoleMsg(" item#" .. i .. ": " .. info.takeInfo.name .. " (track: " .. trackInfo.name .. ")\n")
         end
     end
 
