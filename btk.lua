@@ -138,10 +138,15 @@ end
 
 local function GetItemTakeInfo(itemTake)
     local _, name = reaper.GetSetMediaItemTakeInfo_String(itemTake, "P_NAME", "", false)
+    local pcmSourceAddr = reaper.GetMediaItemTakeInfo_Value(itemTake, "P_SOURCE")
+    local pcmSource = reaper.JS_Window_HandleFromAddress(pcmSourceAddr)
+    local length, _ = reaper.GetMediaSourceLength(pcmSource)
     return {
         -- 0=normal, 1=reverse stereo, 2=downmix, 3=left, 4=right
         channelMode = reaper.GetMediaItemTakeInfo_Value(itemTake, "I_CHANMODE"),
         name = name,
+        playrate = reaper.GetMediaItemTakeInfo_Value(itemTake, "D_PLAYRATE"),
+        length = length,
         startOffset = reaper.GetMediaItemTakeInfo_Value(itemTake, "D_STARTOFFS")
     }
 end
@@ -206,6 +211,12 @@ local function SetItemInfo(item, info)
     end
     if info.fadeOutShape ~= nil then
         reaper.SetMediaItemInfo_Value(item, "C_FADEOUTSHAPE", info.fadeOutShape)
+    end
+end
+
+local function SetItemTakeInfo(itemTake, info)
+    if info.startOffset ~= nil then
+        reaper.SetMediaItemTakeInfo_Value(itemTake, "D_STARTOFFS", info.startOffset)
     end
 end
 
@@ -285,7 +296,7 @@ local function GetChildTracks(track)
     local trackDepth = reaper.GetTrackDepth(track)
     local childTracks = {}
 
-    for i = trackInfo.trackNumber1Based, reaper.CountTracks(0) do
+    for i = trackInfo.trackNumber1Based, reaper.CountTracks(0) - 1 do
         local nextTrack = reaper.GetTrack(0, i)
         local nextTrackDepth = reaper.GetTrackDepth(nextTrack)
         if nextTrackDepth <= trackDepth then
@@ -346,20 +357,23 @@ end
 local function GetMarkerSnapPoints()
     local snapPoints = {0}
 
-    local function insertIfUnique(num)
+    local function InsertIfUnique(num)
         if #snapPoints == 0 or not Approximately(num, snapPoints[#snapPoints]) then
             snapPoints[#snapPoints + 1] = num
         end
     end
 
     for _, marker in ipairs(GetProjectMarkers()) do
-        insertIfUnique(marker.position)
+        InsertIfUnique(marker.position)
+        if marker.isRegion then
+            InsertIfUnique(marker.regionEnd)
+        end
     end
 
     local loopStart, loopEnd = GetLoopTimeRange()
 
     if loopStart ~= loopEnd then
-        insertIfUnique(loopStart)
+        InsertIfUnique(loopStart)
     end
 
     table.sort(snapPoints)
@@ -850,6 +864,50 @@ local function FirstItemPosition(items)
     return firstItemPosition
 end
 
+local function InsertRegionForItemsAndAddToMatrix(items)
+    if #items == 0 then
+        return
+    end
+
+    local itemsInfo = GetItemsInfo(items)
+    local startPosition = -1
+    local endPosition = -1
+
+    for _, info in ipairs(itemsInfo) do
+        if startPosition == -1 or info.position < startPosition then
+            startPosition = info.position
+        end
+        if endPosition == -1 or info.position + info.length > endPosition then
+            endPosition = info.position + info.length
+        end
+    end
+
+    local defaultName = GetTrackInfo(itemsInfo[1].track).name
+    defaultName = string.gsub(defaultName, "%(%d%)", "")
+
+    local _, regionName = reaper.GetUserInputs("Region name [" .. defaultName .. "]", 1, "", "")
+
+    if regionName == "" then
+        regionName = defaultName
+    end
+
+    local regionIndex = reaper.AddProjectMarker(0, true, startPosition, endPosition, regionName, -1)
+
+    for _, info in ipairs(itemsInfo) do
+        reaper.SetRegionRenderMatrix(0, regionIndex, info.track, 1)
+    end
+end
+
+local function MoveItemToRelativeTrackNumber(item, delta)
+    local trackInfo = GetTrackInfo(GetItemInfo(item).track)
+    local newTrackIndex = trackInfo.index + delta
+    newTrackIndex = math.max(0, math.min(reaper.CountTracks(0) - 1, newTrackIndex))
+    reaper.MoveMediaItemToTrack(item, reaper.GetTrack(0, newTrackIndex))
+    -- The view doesn't update until the cursor is moved for some reason
+    rpr.view_move_cursor_right_one_pixel()
+    rpr.view_move_cursor_left_one_pixel()
+end
+
 return {
     AnyCollapsed = AnyCollapsed,
     Approximately = Approximately,
@@ -888,9 +946,11 @@ return {
     GlueItemsPreserveFade = GlueItemsPreserveFade,
     HasLoopTimeRange = HasLoopTimeRange,
     HSL = HSL,
+    InsertRegionForItemsAndAddToMatrix = InsertRegionForItemsAndAddToMatrix,
     IterSelectedTracks = IterSelectedTracks,
     Log = Log,
     main = main,
+    MoveItemToRelativeTrackNumber = MoveItemToRelativeTrackNumber,
     MoveItemToTrack = MoveItemToTrack,
     num2bool = num2bool,
     RenderSelectionOrSelectedItems = RenderSelectionOrSelectedItems,
@@ -901,6 +961,7 @@ return {
     SelectOnlyTrack = SelectOnlyTrack,
     SelectOnlyTracks = SelectOnlyTracks,
     SetItemInfo = SetItemInfo,
+    SetItemTakeInfo = SetItemTakeInfo,
     SetLoopTimeRange = SetLoopTimeRange,
     SetLoopTimeRangeAndCursor = SetLoopTimeRangeAndCursor,
     SetTrackInfo = SetTrackInfo,

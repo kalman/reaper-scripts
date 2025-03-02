@@ -23,14 +23,14 @@ btk.main("MoveSelectedItemsToChildTracks", function()
     reaper.SetOnlyTrackSelected(sourceTrack)
     local nextTrackIndex = sourceTrackInfo.trackNumber1Based
 
-    for _, item in ipairs(sourceItems) do
+    for i, item in ipairs(sourceItems) do
         btk.SelectOnlyItem(item)
 
         reaper.InsertTrackInProject(0, nextTrackIndex, 0)
         local newTrack = reaper.GetTrack(0, nextTrackIndex)
 
         btk.SetTrackInfo(newTrack, {
-            name = sourceTrackInfo.name
+            name = sourceTrackInfo.name .. "(" .. i .. ")"
         })
 
         newTracks[#newTracks + 1] = newTrack

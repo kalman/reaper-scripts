@@ -4,7 +4,8 @@ package.path = folder_path .. '?.lua;'
 local btk = require 'btk'
 local rpr = require 'rpr'
 
-btk.main("InsertRegionForSelectedItemsAndAddToMatrix", function()
-    btk.InsertRegionForItemsAndAddToMatrix(btk.GetSelectedItems())
-    btk.GenerateMarkerColors()
+btk.main("MoveItemToPreviousTrack", function()
+    for _, item in ipairs(btk.GetSelectedItems()) do
+        btk.MoveItemToRelativeTrackNumber(item, -1)
+    end
 end)
