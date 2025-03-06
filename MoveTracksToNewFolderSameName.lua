@@ -14,10 +14,12 @@ btk.main("MoveTracksToNewFolderSameName", function()
     rpr.track_move_tracks_to_new_folder()
 
     local newFolder = reaper.GetLastTouchedTrack()
+
     btk.SetTrackInfo(newFolder, {
         name = btk.GetTrackInfo(selectedTracks[1]).name
     })
-    reaper.SetTrackColor(newFolder, reaper.GetTrackColor(selectedTracks[1]))
+
+    -- reaper.SetTrackColor(newFolder, reaper.GetTrackColor(selectedTracks[1]))
 
     btk.GenerateMarkerColors()
     rpr.track_rename_last_touched()
