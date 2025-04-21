@@ -501,6 +501,12 @@ local function GenerateMarkerColors(regenerate)
     local regionedTracks = {}
     local defaultColor = RGB(255, 0, 0)
 
+    local function SetTrackColor(track, color)
+        reaper.SetTrackColor(track, color)
+        local trackGUID = reaper.GetTrackGUID(track)
+        regionedTracks[trackGUID] = true
+    end
+
     for _, track in ipairs(GetAllTracks()) do
         reaper.SetMediaTrackInfo_Value(track, "I_CUSTOMCOLOR", 0)
         defaultColor = reaper.GetTrackColor(track)
@@ -517,24 +523,16 @@ local function GenerateMarkerColors(regenerate)
         end
 
         if marker.isRegion then
-            for i = 0, 100 do
+            for i = 0, 1000 do
                 local track = reaper.EnumRegionRenderMatrix(0, marker.regionNumber, i)
                 if track == nil then
                     break
                 end
 
-                reaper.SetTrackColor(track, markerColor)
+                SetTrackColor(track, markerColor)
 
-                local trackGUID = reaper.GetTrackGUID(track)
-                regionedTracks[trackGUID] = true
-
-                if reaper.GetTrackDepth(track) > 0 then
-                    local parentTrack = reaper.GetParentTrack(track)
-                    local parentGUID = reaper.GetTrackGUID(parentTrack)
-
-                    -- if regionedTracks[parentGUID] ~= true then
-                    --     reaper.SetTrackColor(parentTrack, BlackTint(markerColor))
-                    -- end
+                for _, descTrack in ipairs(GetDescendantTracks(track)) do
+                    SetTrackColor(descTrack, markerColor)
                 end
             end
         end
@@ -898,14 +896,20 @@ local function InsertRegionForItemsAndAddToMatrix(items)
     end
 end
 
+
+local function Redraw()
+    -- The view doesn't update until the cursor is moved for some reason
+    rpr.view_move_cursor_right_one_pixel()
+    rpr.view_move_cursor_left_one_pixel()
+end
+
+
 local function MoveItemToRelativeTrackNumber(item, delta)
     local trackInfo = GetTrackInfo(GetItemInfo(item).track)
     local newTrackIndex = trackInfo.index + delta
     newTrackIndex = math.max(0, math.min(reaper.CountTracks(0) - 1, newTrackIndex))
     reaper.MoveMediaItemToTrack(item, reaper.GetTrack(0, newTrackIndex))
-    -- The view doesn't update until the cursor is moved for some reason
-    rpr.view_move_cursor_right_one_pixel()
-    rpr.view_move_cursor_left_one_pixel()
+    Redraw()
 end
 
 return {
@@ -953,6 +957,7 @@ return {
     MoveItemToRelativeTrackNumber = MoveItemToRelativeTrackNumber,
     MoveItemToTrack = MoveItemToTrack,
     num2bool = num2bool,
+    Redraw = Redraw,
     RenderSelectionOrSelectedItems = RenderSelectionOrSelectedItems,
     Reverse = Reverse,
     RGB = RGB,
