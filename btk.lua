@@ -497,7 +497,7 @@ local function GenerateMarkerColors(regenerate)
         return reaper.ColorToNative(math.ceil(r / 8), math.ceil(g / 8), math.ceil(b / 8))
     end
 
-    local hue = RandomHue(0)
+    local hue = nil
     local regionedTracks = {}
     local defaultColor = RGB(255, 0, 0)
 
@@ -512,14 +512,19 @@ local function GenerateMarkerColors(regenerate)
         defaultColor = reaper.GetTrackColor(track)
     end
 
+    local previousMarkerName = nil
+
     for _, marker in ipairs(markers) do
         local markerColor = marker.color
 
         if regenerate or markerColor == 0 then
+            if previousMarkerName == nil or previousMarkerName ~= marker.name then
+                hue = RandomHue(hue or 0, 50)
+                previousMarkerName = marker.name
+            end
             markerColor = HSL(hue, 1, 0.5)
             reaper.SetProjectMarker4(0, marker.regionNumber, marker.isRegion, marker.position, marker.regionEnd, "",
                 markerColor, 0)
-            hue = RandomHue(hue, 50)
         end
 
         if marker.isRegion then
